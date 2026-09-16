@@ -1,6 +1,5 @@
 import { Capacitor } from '@capacitor/core';
 import { Haptics, NotificationType } from '@capacitor/haptics';
-import { LocalNotifications } from '@capacitor/local-notifications';
 /**
  * Background Timer & Rest Engine (Rung Im Lặng & Đếm Giờ Màn Hình Chờ iOS)
  * Chuyên dụng cho iOS Safari (iPhone 16 / iOS 18) & PWA Standalone:
@@ -372,27 +371,6 @@ export function startBackgroundRestCountdown(params: RestCountdownParams) {
     playPromise.catch(() => {});
   }
 
-  // 4. Lên lịch Native Local Notification cho iOS (hẹn giờ tầng hệ điều hành)
-  if (Capacitor.isNativePlatform()) {
-    try {
-      LocalNotifications.schedule({
-        notifications: [
-          {
-            id: 1001,
-            title: mode === 'vibrate' ? '📳 FITBOD PRO: HẾT GIỜ NGHỈ!' : '🔔 FITBOD PRO: HẾT GIỜ NGHỈ!',
-            body: params.nextExerciseName
-              ? `Vào hiệp tiếp theo thôi Sếp: ${params.nextExerciseName}!`
-              : 'Hết giờ nghỉ hồi phục, vào hiệp mới thôi Sếp ơi!',
-            schedule: { at: new Date(params.targetEpochMs) },
-            sound: mode === 'vibrate' ? undefined : 'beep.wav',
-            actionTypeId: '',
-            extra: null
-          }
-        ]
-      }).catch(() => {});
-    } catch (e) {}
-  }
-
   // 5. Đăng ký đếm lùi trên Màn hình chờ & Dynamic Island
   updateLockScreenMedia(duration, params.nextExerciseName, params.onSkipRest, params.onAdd30s, mode);
 
@@ -490,12 +468,6 @@ function handleRestComplete() {
 export function stopBackgroundRestCountdown() {
   currentTargetEpoch = null;
   releaseScreenWakeLock();
-
-  if (Capacitor.isNativePlatform()) {
-    try {
-      LocalNotifications.cancel({ notifications: [{ id: 1001 }] }).catch(() => {});
-    } catch (e) {}
-  }
 
   if (backgroundWorker) {
     try {
