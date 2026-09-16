@@ -1,0 +1,31 @@
+# Dependencies
+node_modules/
+
+# Production build outputs
+dist/
+dist-ssr/
+*.local
+
+# Heavy folders & tools & workflows
+bin/
+shopify_sub/
+.github/
+*.exe
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS & Editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# iOS Xcode temporary builds
+ios/App/build/
+ios/App/DerivedData/
+ios/App/.build/

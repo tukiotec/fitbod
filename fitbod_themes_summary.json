@@ -1,0 +1,326 @@
+{
+  "recovery": [
+    {
+      "id": 360006269014,
+      "title": "Muscle Recovery",
+      "snippet": "Muscle <em>Recovery</em> in Fitbod Understanding Muscle <em>Recovery</em> Percentages View or Edit Your Muscle <em>Recovery</em> Tracking <em>Recovery</em> from",
+      "body_preview": "Table of Contents Muscle Recovery in Fitbod Understanding Muscle Recovery Percentages View or Edit Your Muscle Recovery Tracking Recovery from Imported Workouts Muscle Recovery in Fitbod Regular physical activity delivers a wide range of health benefits. But sustainable progress relies not just on consistent effort but also on adequate recovery. Muscle recovery plays an important role in performance, adaptation, and injury prevention. Fitbod helps you manage this by tracking the recovery status "
+    },
+    {
+      "id": 360009372413,
+      "title": "When should I move up my Fitness Experience?",
+      "snippet": "determines the types of recommendations you'll see and how muscle <em>recovery</em> is calculated. Consider increasing your level when you notice",
+      "body_preview": "Your experience level determines the types of recommendations you'll see and how muscle recovery is calculated. Consider increasing your level when you notice these signs: You consistently meet or exceed your workout goals, and workouts are becoming easy You've noticed significant improvements in your strength, endurance, or both Exercises in your workouts feel repetitive or unchallenging You've reached a plateau and no longer see or feel the same level of progress You feel confident and comfort"
+    },
+    {
+      "id": 360004429814,
+      "title": "How Fitbod Creates Your Workout",
+      "snippet": "Workout History? How Fitbod Tracks Muscle <em>Recovery</em> Muscle <em>Recovery</em> Tracking How <em>Recovery</em> Affects Workout Recommendations External",
+      "body_preview": "Table of Contents Introduction How Fitbod Personalizes your Workouts Understanding Your Preferences How Fitbod Selects Exercises For You How Workout Duration Affects Your Workouts Fine-tuning Your Workouts How Fitbod Recommends Sets, Reps, and Weight Understanding Workout Intensity &amp; Adaptation What If I’m New and Have No Workout History? How Fitbod Tracks Muscle Recovery Muscle Recovery Tracking How Recovery Affects Workout Recommendations External Factors Affecting Muscle Recovery How Fitb"
+    },
+    {
+      "id": 29976088485143,
+      "title": "Fitness Experience",
+      "snippet": "steadily and sustainably over time. <em>Recovery</em> Considerations: Muscle <em>recovery</em> is adjusted as part of workout planning",
+      "body_preview": "Your experience level tailors workouts to your training background, influencing exercise complexity, structure, and progression. Table of Contents How Experience Affects Your Workouts Experience Level Options How to Change Your Experience Level FAQ How Experience Affects Your Workouts Your experience level customizes four key aspects of your training: Exercise Selection: Higher levels unlock a wider variety of movements, including more technically demanding options, while beginners focus on mast"
+    },
+    {
+      "id": 9093233634711,
+      "title": "Recommend More, Less, or Exclude Exercises",
+      "snippet": "exercise appearing in your workouts. Your workout duration, <em>recovery</em>, and other settings still influence what's recommended.",
+      "body_preview": "Indicate your exercise preferences to shape your workouts. Tell Fitbod which exercises you want more of, less of, or never want to see. Table of Contents Preference Options How To Set Preferences FAQ Preference Options These preferences help tailor your workouts to your goals, equipment, and personal preferences. Think of it as a way to nudge the app toward your preferences (except for \"Don't Recommend Again\", which will exclude the exercise entirely). Recommend More Often Increases the likeliho"
+    },
+    {
+      "id": 16254175592215,
+      "title": "Fitbod's Algorithm - Q&A",
+      "snippet": "algorithm that uses your training history, fitness goals, muscle <em>recovery</em>, and available equipment to deliver highly personalized",
+      "body_preview": "Table of Contents Introduction Getting Started Fitbod's Workout Recommendations Adjusting Workouts Manually Final Tip Introduction Fitbod’s workout recommendations are powered by a smart algorithm that uses your training history, fitness goals, muscle recovery, and available equipment to deliver highly personalized workouts. Below you’ll find answers to frequently asked questions about how Fitbod builds your workouts—and how to get the most out of them. Getting Started Why can’t Fitbod generate "
+    },
+    {
+      "id": 42333470514455,
+      "title": "Why did my workout change? Understanding workout refreshes",
+      "snippet": "your recommended workout from your recent training history, <em>recovery</em>, available equipment, and your workout and profile settings",
+      "body_preview": "Fitbod builds your recommended workout from your recent training history, recovery, available equipment, and your workout and profile settings. When any of those change, Fitbod generates a new workout to keep your recommendations up to date. What triggers a refresh Completing or importing a workout Logging a workout in Fitbod. Importing a cardio or activity session from a connected app such as Apple Health (iPhone), Health Connect (Android), Fitbit, or Strava. Fitbod treats newly logged activity"
+    },
+    {
+      "id": 28062570249623,
+      "title": "Custom Exercises",
+      "snippet": "accordingly. Do custom exercises affect my muscle <em>recovery</em> tracking? Yes. Muscle <em>recovery</em> is calculated based on the primary and secondary",
+      "body_preview": "Make Fitbod truly yours! Custom exercises give you the freedom to track specialty movements, equipment-specific exercises, or anything else you do. Every rep counts, and so does every exercise. Table of Contents Overview When to Use Custom Exercises How to Create a Custom Exercise Features and Capabilities Limitations to Keep in Mind How to Delete a Custom Exercise Getting More from Custom Exercises FAQ Overview Custom exercises are exercises you create yourself. Once created, they behave like a"
+    },
+    {
+      "id": 15948615409687,
+      "title": "Fitness Goals",
+      "snippet": "Strength and powerlifting goals include longer rest for <em>recovery</em>. Fat loss or conditioning goals use shorter rest times to",
+      "body_preview": "Your goal determines recommended exercises, sets, reps, and intensity based on whether you want to build muscle, gain strength, or get leaner. Change your goal anytime without losing history. Future workouts adjust automatically. Table of Contents Goal Options How Your Goal Impacts Your Workouts Understanding Fat Loss vs. Weight Loss Training for Fat Loss How to Set or Change Your Fitness Goal FAQ Goal Options Goal Description Build Muscle Increase muscle size and volume through hypertrophy-focu"
+    },
+    {
+      "id": 28568837402775,
+      "title": "On Demand Workouts",
+      "snippet": "workouts are personalized based on your training history, <em>recovery</em>, and plan. On demand workouts are pre-configured templates",
+      "body_preview": "On Demand Workouts are pre-built workouts you can start instantly. They're great when you want a quick session with specific equipment or don't want to follow your regular plan. Available on iOS. Table of Contents How to Access Available Workouts How They Differ from Regular Workouts How to Access Go to the Workout tab. Select the Swap button. Scroll down and click On Demand Workouts . Select one of the workouts listed below. Start Workout Available Workouts Category Workout Duration Bodyweight "
+    },
+    {
+      "id": 30721437384215,
+      "title": "How to Navigate the Exercise Details Screen",
+      "snippet": "exercises. Rest Timer Access – A built-in rest timer to guide <em>recovery</em> between sets. Access to Log Reps in Reserve (RiR) – Track",
+      "body_preview": "Table of Contents Overview Accessing the Exercise Details Screen Understanding the Exercise Details Screen Viewing Exercise Demonstrations Adjusting Sets, Reps, and Weight Using the Rest Timer Logging Reps in Reserve (RiR) Adding Exercise Notes Overview The Exercise Details page in Fitbod provides essential information about each exercise, including instructions, recommended sets and reps, weight guidance, and video demonstrations. This guide will help you navigate the page and make the most of "
+    },
+    {
+      "id": 360047357794,
+      "title": "Apple Health",
+      "snippet": "account for outside activity, manually adjust your muscle <em>recovery</em> percentages from the Workout tab before generating your",
+      "body_preview": "Table of Contents How to Connect Apple Health Apple Health Sync Permissions Logging &amp; Syncing Workouts Compatible Apple Health Workouts Disconnecting Fitbod and Apple Health FAQ Introduction Sync your workouts and body composition data with Apple Health for better progress tracking and personalized workout recommendations. Workouts : Send logged workouts to Apple Health and import compatible Apple Health workouts into Fitbod. Body Composition : Sync body fat percentage, weight, and lean mass"
+    },
+    {
+      "id": 31891449815703,
+      "title": "Fitbod for Business: Program Overview & Benefits",
+      "snippet": "workouts, personalized training, instructional videos, and <em>recovery</em> tracking. Personalized Workouts: Workouts are tailored",
+      "body_preview": "Welcome to Fitbod for Business! This article provides a comprehensive overview of our corporate wellness program, designed to help organizations improve employee health, engagement, and productivity through personalized fitness. Note: Fitbod for Business was previously called \"Fitbod for Teams.\" You may still see the older name in some places. Table of Contents What is Fitbod for Business? Key Features &amp; Benefits How Does It Work? Pricing &amp; Plans Frequently Asked Questions How to Get Sta"
+    },
+    {
+      "id": 35301260960663,
+      "title": "Focus Exercises",
+      "snippet": "as a focus exercise. This helps manage training load and <em>recovery</em> when you have fewer workout days. You can rotate between",
+      "body_preview": "Focus Exercises add structure and consistency to your training by highlighting key compound lifts that repeat across a four-week cycle, giving you a clear way to track progress, refine technique, and build strength over time. Table of Contents Understanding Focus Exercises How to Enable What to Expect View Your Progress FAQ Understanding Focus Exercises Focus Exercises are your primary strength movements. These are major compound lifts that engage multiple muscle groups at once, like squats, ben"
+    },
+    {
+      "id": 34336407191191,
+      "title": "My Plan",
+      "snippet": "to improve flexibility, reduce injury risk, and support <em>recovery</em>. Choose which types to include: Soft Tissue Exercises:",
+      "body_preview": "My Plan is where you customize how your workouts are built. Set your goals, configure available equipment, define your training schedule, and adjust preferences to personalize your training program. Table of Contents Getting Started Goals Equipment &amp; Locations Training Profile Training Format Preferences FAQ Getting Started Go to Workout tab → My Plan , then: Choose your goal from the list Tap Location → select or add your gym and equipment Set Workouts / Week to match your schedule All othe"
+    },
+    {
+      "id": 360033133174,
+      "title": "Reps in Reserve (RiR) - Formerly Exertion Rating/RPE",
+      "snippet": "superset fatigue in that specific workout. However, the <em>algorithm</em> places more weight on your strongest, most recent performances",
+      "body_preview": "Table of Contents Overview How to Use Reps in Reserve in Fitbod Logging RiR in Your Workout Understand RiR Ratings Exertion Rating on the Apple Watch Why Use Reps in Reserve? Reps in Reserve: Frequently Asked Questions How should I choose my RiR rating? How does RiR affect my future workouts? Can I change my RiR rating after logging it? Does RiR apply to all exercises? Overview Reps in Reserve (RiR) is a method used to measure exertion during strength training. It represents the number of additi"
+    },
+    {
+      "id": 360019715433,
+      "title": "Stretching / Warm-up & Cool-down",
+      "snippet": "cool-down, The muscles you're training that day, The <em>equipment</em> you have available, and Your total workout length When",
+      "body_preview": "Add stretching to your workouts to warm up before training or cool down afterward. Warm-ups increase heart rate and blood flow, reduce injury risk, and improve mobility. Cool-downs return your body to a resting state, prevent lightheadedness, and reduce soreness. Table of Contents Types of stretching exercises How to enable stretching How much stretching you'll see Why you might see fewer stretches than expected FAQ Types of stretching exercises Soft Tissue Foam rolling exercises that increase b"
+    }
+  ],
+  "workout_generation": [
+    {
+      "id": 360004429814,
+      "title": "How Fitbod Creates Your Workout",
+      "snippet": "Workout History? How Fitbod Tracks Muscle <em>Recovery</em> Muscle <em>Recovery</em> Tracking How <em>Recovery</em> Affects Workout Recommendations External",
+      "body_preview": "Table of Contents Introduction How Fitbod Personalizes your Workouts Understanding Your Preferences How Fitbod Selects Exercises For You How Workout Duration Affects Your Workouts Fine-tuning Your Workouts How Fitbod Recommends Sets, Reps, and Weight Understanding Workout Intensity &amp; Adaptation What If I’m New and Have No Workout History? How Fitbod Tracks Muscle Recovery Muscle Recovery Tracking How Recovery Affects Workout Recommendations External Factors Affecting Muscle Recovery How Fitb"
+    },
+    {
+      "id": 16254175592215,
+      "title": "Fitbod's Algorithm - Q&A",
+      "snippet": "algorithm that uses your training history, fitness goals, muscle <em>recovery</em>, and available equipment to deliver highly personalized",
+      "body_preview": "Table of Contents Introduction Getting Started Fitbod's Workout Recommendations Adjusting Workouts Manually Final Tip Introduction Fitbod’s workout recommendations are powered by a smart algorithm that uses your training history, fitness goals, muscle recovery, and available equipment to deliver highly personalized workouts. Below you’ll find answers to frequently asked questions about how Fitbod builds your workouts—and how to get the most out of them. Getting Started Why can’t Fitbod generate "
+    },
+    {
+      "id": 42333470514455,
+      "title": "Why did my workout change? Understanding workout refreshes",
+      "snippet": "your recommended workout from your recent training history, <em>recovery</em>, available equipment, and your workout and profile settings",
+      "body_preview": "Fitbod builds your recommended workout from your recent training history, recovery, available equipment, and your workout and profile settings. When any of those change, Fitbod generates a new workout to keep your recommendations up to date. What triggers a refresh Completing or importing a workout Logging a workout in Fitbod. Importing a cardio or activity session from a connected app such as Apple Health (iPhone), Health Connect (Android), Fitbit, or Strava. Fitbod treats newly logged activity"
+    },
+    {
+      "id": 28568837402775,
+      "title": "On Demand Workouts",
+      "snippet": "workouts are personalized based on your training history, <em>recovery</em>, and plan. On demand workouts are pre-configured templates",
+      "body_preview": "On Demand Workouts are pre-built workouts you can start instantly. They're great when you want a quick session with specific equipment or don't want to follow your regular plan. Available on iOS. Table of Contents How to Access Available Workouts How They Differ from Regular Workouts How to Access Go to the Workout tab. Select the Swap button. Scroll down and click On Demand Workouts . Select one of the workouts listed below. Start Workout Available Workouts Category Workout Duration Bodyweight "
+    },
+    {
+      "id": 35143391721495,
+      "title": "Static Workout Plans vs. Adaptive Training Apps: Why Fitbod Adjusts to You",
+      "snippet": "Discover how Fitbod’s smart training <em>algorithms</em> personalize your workout plan by analyzing your past sessions, equipment",
+      "body_preview": "Discover how Fitbod’s smart training algorithms personalize your workout plan by analyzing your past sessions, equipment available, and fitness goals to deliver customized workouts that evolve with you. Join the discussion!"
+    },
+    {
+      "id": 6259258835863,
+      "title": "Save a Workout",
+      "snippet": "new sets, reps, and weight: Updates everything using our <em>algorithm</em>. This is based on your current strength, adjusting sets",
+      "body_preview": "Save a workout you've created or revisit a past favorite anytime. Saving a workout allows you to quickly load and repeat it whenever you want. Table of Contents How to Save a Workout How Saved Workouts Adapt to You How to Load a Saved Workout How to Delete a Saved Workout FAQ How to Save a Workout From the Workout tab: Go to the Workout tab. Tap the \" ...\" menu in the top-right corner. Select Save Workout. Tap Create New Saved Workout. Enter a name for your workout. Tap Save. From a previously l"
+    },
+    {
+      "id": 360006335593,
+      "title": "Editing Workouts in Fitbod",
+      "snippet": "you go. On the Exercise Details Screen Edit <em>Reps</em> or Weight: Tap <em>Reps</em> or Weight field &gt; Enter a new value. Add",
+      "body_preview": "You can edit workouts in Fitbod both before you start, while you’re in progress, and even after the workout has been logged. This guide shows you what changes can be made at each stage. Table of Contents Before Starting a Workout During a Workout After a Workout FAQ Before Starting a Workout From the Workout tab, you can prepare and customize your workout before you begin. Swap Menu The Swap Menu is now the main place to adjust your workout before starting. Previously, options like change your m"
+    },
+    {
+      "id": 16436302450711,
+      "title": "Your Workout Report",
+      "snippet": "year by selecting <em>one</em> of the options in the date range filter. Muscle Volume is the product of the <em>reps</em>, sets, and weights",
+      "body_preview": "Table of Contents How to Access Your Workout Report Fitbod app Emailed Reports Report Breakdown Date Range Filter General Metrics Muscle Strength Muscle Volume Report Notifications Log Tab Banner Emailed Reports Frequently Asked Questions (FAQ) Can I edit the date range filter to whatever dates I want? Can I change when I receive my emailed reports? I’m not receiving my reports via email. What can I do? Can I receive either the weekly or monthly workout reports instead of both? As a Fitbod subsc"
+    },
+    {
+      "id": 360006427453,
+      "title": "Sharing a Workout & Gym Location Settings",
+      "snippet": "your own pace! <em>Generate</em> a shareable link to send a <em>workout</em> to a partner. When they open it in Fitbod, the <em>workout</em> automatically",
+      "body_preview": "Train together at your own pace! Generate a shareable link to send a workout to a partner. When they open it in Fitbod, the workout automatically adapts to their fitness level. This will modify sets, reps, and weights while keeping the exercises and structure intact. Table of Contents Share a workout Share gym location settings Share your workout summary FAQ Share a workout Tap ... to the right of the Swap button. Tap Share Workout Link . Send the link using your preferred method. 💡 Note: Shared"
+    },
+    {
+      "id": 23376692769559,
+      "title": "Pause a Workout",
+      "snippet": "instructions on how to pause Fitbod <em>workouts</em>. Table of Contents How to Pause a <em>Workout</em> In the iOS and Android app ",
+      "body_preview": "In this article, you will find details about and instructions on how to pause Fitbod workouts. Table of Contents How to Pause a Workout In the iOS and Android app How to Pause a Workout When you need to take a break, answer a call, or wait for equipment, you can pause your workout. You'll stop your exercise session without ending it and you won't lose any progress. This feature will work for up to three hours. After that, Fitbod will automatically log your workout. Currently, Apple Health does n"
+    },
+    {
+      "id": 38318585683991,
+      "title": "Customizing Today's Workout",
+      "snippet": "but you still want an effective session. <em>Equipment</em> Switch up your available <em>equipment</em> for today's session. Perfect if you're",
+      "body_preview": "Fitbod gives you two ways to customize your workout for the day: Swap Menu: Change your muscle focus or switch to a different workout entirely. Training Session Mods: Adjust the workout duration and equipment for today's workout. Settings like Fitness Goal and Variability are now part of My Plan so they stay consistent across workouts instead of unintentionally resetting each day. This keeps your daily workout focused on what you're most likely to change in the moment, like how much time you hav"
+    },
+    {
+      "id": 35065044008983,
+      "title": "Why Static 12-Week Workout Plans Fail — and How Adaptive Training Apps Like Fitbod Drive Better Results",
+      "snippet": "workouts dynamically adjust to your goals, progress and <em>equipment</em>, delivering more consistent gains, fewer plateaus, and better",
+      "body_preview": "Discover why static 12-week programs fall short and how Fitbod’s adaptive AI-driven workouts dynamically adjust to your goals, progress and equipment, delivering more consistent gains, fewer plateaus, and better results. Join the discussion!"
+    },
+    {
+      "id": 360013245993,
+      "title": "Weekly Workout Goal, Previews & Streaks",
+      "snippet": "end of the week, your streak resets to 0. There is no grace <em>period</em>. Streaks are based on the total number of workouts logged",
+      "body_preview": "Setting a weekly workout goal helps you stay consistent with your training. It’s used for optional workout reminders and for tracking weekly progress with streaks. Set your weekly workout goal Go to My Plan . Scroll to Training Profile and tap Workouts / Week. Choose one of the following: Days Per Week : Set a weekly training frequency (for example, 3 workouts per week). Specific Days : Select exact workout days (for example, Tuesday and Thursday). If you choose specific days, you can set a Work"
+    },
+    {
+      "id": 35305295284119,
+      "title": "Best AI Fitness Apps 2025: The Complete Guide to AI-Powered Muscle Building Apps",
+      "snippet": "Check out our complete 2025 guide to the best AI-powered <em>muscle</em>-building apps and why Fitbod’s adaptive AI delivers customized",
+      "body_preview": "Check out our complete 2025 guide to the best AI-powered muscle-building apps and why Fitbod’s adaptive AI delivers customized strength training that outperforms generic fitness tools. Join the discussion!"
+    },
+    {
+      "id": 35305267468567,
+      "title": "Top 9 Lean Muscle-Building Apps for Women in 2025: Why Strength > Bulking",
+      "snippet": "Explore our roundup of the 9 best lean <em>muscle</em>-building apps for women in 2025, including Fitbod, and learn why personalized",
+      "body_preview": "Explore our roundup of the 9 best lean muscle-building apps for women in 2025, including Fitbod, and learn why personalized, strength-focused training beats bulking and supports lean, sustainable gains. Join the discussion!"
+    }
+  ],
+  "1rm_progression": [
+    {
+      "id": 360004429814,
+      "title": "How Fitbod Creates Your Workout",
+      "snippet": "Workout History? How Fitbod Tracks Muscle <em>Recovery</em> Muscle <em>Recovery</em> Tracking How <em>Recovery</em> Affects Workout Recommendations External",
+      "body_preview": "Table of Contents Introduction How Fitbod Personalizes your Workouts Understanding Your Preferences How Fitbod Selects Exercises For You How Workout Duration Affects Your Workouts Fine-tuning Your Workouts How Fitbod Recommends Sets, Reps, and Weight Understanding Workout Intensity &amp; Adaptation What If I’m New and Have No Workout History? How Fitbod Tracks Muscle Recovery Muscle Recovery Tracking How Recovery Affects Workout Recommendations External Factors Affecting Muscle Recovery How Fitb"
+    },
+    {
+      "id": 29976088485143,
+      "title": "Fitness Experience",
+      "snippet": "steadily and sustainably over time. <em>Recovery</em> Considerations: Muscle <em>recovery</em> is adjusted as part of workout planning",
+      "body_preview": "Your experience level tailors workouts to your training background, influencing exercise complexity, structure, and progression. Table of Contents How Experience Affects Your Workouts Experience Level Options How to Change Your Experience Level FAQ How Experience Affects Your Workouts Your experience level customizes four key aspects of your training: Exercise Selection: Higher levels unlock a wider variety of movements, including more technically demanding options, while beginners focus on mast"
+    },
+    {
+      "id": 16254175592215,
+      "title": "Fitbod's Algorithm - Q&A",
+      "snippet": "algorithm that uses your training history, fitness goals, muscle <em>recovery</em>, and available equipment to deliver highly personalized",
+      "body_preview": "Table of Contents Introduction Getting Started Fitbod's Workout Recommendations Adjusting Workouts Manually Final Tip Introduction Fitbod’s workout recommendations are powered by a smart algorithm that uses your training history, fitness goals, muscle recovery, and available equipment to deliver highly personalized workouts. Below you’ll find answers to frequently asked questions about how Fitbod builds your workouts—and how to get the most out of them. Getting Started Why can’t Fitbod generate "
+    },
+    {
+      "id": 15948615409687,
+      "title": "Fitness Goals",
+      "snippet": "Strength and powerlifting goals include longer rest for <em>recovery</em>. Fat loss or conditioning goals use shorter rest times to",
+      "body_preview": "Your goal determines recommended exercises, sets, reps, and intensity based on whether you want to build muscle, gain strength, or get leaner. Change your goal anytime without losing history. Future workouts adjust automatically. Table of Contents Goal Options How Your Goal Impacts Your Workouts Understanding Fat Loss vs. Weight Loss Training for Fat Loss How to Set or Change Your Fitness Goal FAQ Goal Options Goal Description Build Muscle Increase muscle size and volume through hypertrophy-focu"
+    },
+    {
+      "id": 35301260960663,
+      "title": "Focus Exercises",
+      "snippet": "as a focus exercise. This helps manage training load and <em>recovery</em> when you have fewer workout days. You can rotate between",
+      "body_preview": "Focus Exercises add structure and consistency to your training by highlighting key compound lifts that repeat across a four-week cycle, giving you a clear way to track progress, refine technique, and build strength over time. Table of Contents Understanding Focus Exercises How to Enable What to Expect View Your Progress FAQ Understanding Focus Exercises Focus Exercises are your primary strength movements. These are major compound lifts that engage multiple muscle groups at once, like squats, ben"
+    },
+    {
+      "id": 34336407191191,
+      "title": "My Plan",
+      "snippet": "to improve flexibility, reduce injury risk, and support <em>recovery</em>. Choose which types to include: Soft Tissue Exercises:",
+      "body_preview": "My Plan is where you customize how your workouts are built. Set your goals, configure available equipment, define your training schedule, and adjust preferences to personalize your training program. Table of Contents Getting Started Goals Equipment &amp; Locations Training Profile Training Format Preferences FAQ Getting Started Go to Workout tab → My Plan , then: Choose your goal from the list Tap Location → select or add your gym and equipment Set Workouts / Week to match your schedule All othe"
+    },
+    {
+      "id": 360033133174,
+      "title": "Reps in Reserve (RiR) - Formerly Exertion Rating/RPE",
+      "snippet": "superset fatigue in that specific workout. However, the <em>algorithm</em> places more weight on your strongest, most recent performances",
+      "body_preview": "Table of Contents Overview How to Use Reps in Reserve in Fitbod Logging RiR in Your Workout Understand RiR Ratings Exertion Rating on the Apple Watch Why Use Reps in Reserve? Reps in Reserve: Frequently Asked Questions How should I choose my RiR rating? How does RiR affect my future workouts? Can I change my RiR rating after logging it? Does RiR apply to all exercises? Overview Reps in Reserve (RiR) is a method used to measure exertion during strength training. It represents the number of additi"
+    },
+    {
+      "id": 30721771750039,
+      "title": "Getting Started with Fitbod: A New User's Guide",
+      "snippet": "Recommending Me Lower Weights Than Expected? Fitbod’s <em>algorithm</em> starts conservatively, especially for new users or exercise",
+      "body_preview": "Table of Contents Overview How Do I Get Started With Fitbod? Should I Train to Failure When Performing Exercises? If I Can’t Finish the Recommended Sets, Reps, or Weight, What Should I Do? If My First Set Feels Too Easy, Should I Increase Weight or Do More Reps? Why is Fitbod Recommending Me Lower Weights Than Expected? Do I Have to Follow Fitbod's Recommended Workouts? Need More Help? Overview Welcome to Fitbod! Whether you’re new to fitness or just new to Fitbod, this guide will help you get s"
+    },
+    {
+      "id": 12732749777047,
+      "title": "Fitbod Metrics & Records",
+      "snippet": "If you haven’t trained a specific movement recently, the <em>algorithm</em> reduces your estimate to reflect potential deconditioning",
+      "body_preview": "Fitbod transforms your workout data into meaningful insights that help you train more effectively. This guide explains the key metrics you'll encounter in the app. Table of Contents Strength Score (Overall) Muscle Strength (mStrength) Estimated Strength Benchmark Lifts Key Fitbod Metrics How to View Your Exercise History Fitbod Metrics &amp; Records / FAQ Strength Score (Overall) Your Overall Strength Score offers a snapshot of your total body strength by averaging all your Muscle Strength score"
+    },
+    {
+      "id": 360033675553,
+      "title": "Max Effort Day",
+      "snippet": "Contents How <em>Max</em> Effort Day Works How to Know It's a <em>Max</em> Effort Day How to Hide <em>Max</em> Effort Day FAQ How <em>Max</em> Effort Day Works",
+      "body_preview": "Max Effort Day helps you test and improve your estimated strength for a specific exercise. Your performance during these sets helps refine your estimated strength and improve future workout recommendations. Table of Contents How Max Effort Day Works How to Know It's a Max Effort Day How to Hide Max Effort Day FAQ How Max Effort Day Works When an exercise gets a Max Effort Day, its sets are restructured into a few lighter ramp-up sets followed by two AMRAP sets at your full working weight. On the"
+    },
+    {
+      "id": 29486697282711,
+      "title": "Exercise Details Screen: Sets, Reps, and Weight Fields Explained",
+      "snippet": "deadlifts. How to read/log <em>reps</em> and weight ✅ The <em>reps</em> apply to the total movement (e.g., 8 <em>reps</em> of a squat means 8 full squats)",
+      "body_preview": "Table of Contents Overview What are Sets, Reps, and Weight? How to Read These Fields for Different Exercises Unilateral Exercises (Single-Side Movements) How to read/log reps and weight Bilateral Exercises (Both Sides Simultaneously) How to read/log reps and weight Sets, Reps, and Weight Fields / Frequently Asked Questions What if my set feels too easy? What if I can’t complete the recommended reps or weight? What do \"Bar+Plates\" versus \"Plates Only\" mean for barbell exercises? How do I log weig"
+    },
+    {
+      "id": 360006337634,
+      "title": "Warm-Up Sets",
+      "snippet": "as you approach your working weight, typically with fewer <em>reps</em> at each step. Turning warm-up sets on Open the Workout tab",
+      "body_preview": "Warm-up sets are lighter sets performed before your working sets. They help you prepare for an exercise by practicing the movement and gradually building toward your working weight. When warm-up sets are enabled, they’re added to eligible exercises when your working weight and available equipment allow for a useful warm-up progression. Warm-up sets gradually increase in weight as you approach your working weight, typically with fewer reps at each step. Turning warm-up sets on Open the Workout ta"
+    },
+    {
+      "id": 29976242163223,
+      "title": "Exercise Variability",
+      "snippet": "Variability controls how often your exercises change between <em>workouts</em>. Choose more repetition to track progress on specific movements",
+      "body_preview": "Exercise Variability controls how often your exercises change between workouts. Choose more repetition to track progress on specific movements, or more variety to keep training fresh and explore new exercises. Table of Contents Variability Options Adjusting Exercise Variability Variability Options Option Description Best For More Consistent Retains 70-80% of exercises each week for structured progression Strength progression and progressive overload Balanced (Default) Mix of consistency and vari"
+    }
+  ],
+  "equipment": [
+    {
+      "id": 360006427453,
+      "title": "Sharing a Workout & Gym Location Settings",
+      "snippet": "your own pace! <em>Generate</em> a shareable link to send a <em>workout</em> to a partner. When they open it in Fitbod, the <em>workout</em> automatically",
+      "body_preview": "Train together at your own pace! Generate a shareable link to send a workout to a partner. When they open it in Fitbod, the workout automatically adapts to their fitness level. This will modify sets, reps, and weights while keeping the exercises and structure intact. Table of Contents Share a workout Share gym location settings Share your workout summary FAQ Share a workout Tap ... to the right of the Swap button. Tap Share Workout Link . Send the link using your preferred method. 💡 Note: Shared"
+    }
+  ],
+  "supersets_warmup": [
+    {
+      "id": 360006337634,
+      "title": "Warm-Up Sets",
+      "snippet": "as you approach your working weight, typically with fewer <em>reps</em> at each step. Turning warm-up sets on Open the Workout tab",
+      "body_preview": "Warm-up sets are lighter sets performed before your working sets. They help you prepare for an exercise by practicing the movement and gradually building toward your working weight. When warm-up sets are enabled, they’re added to eligible exercises when your working weight and available equipment allow for a useful warm-up progression. Warm-up sets gradually increase in weight as you approach your working weight, typically with fewer reps at each step. Turning warm-up sets on Open the Workout ta"
+    },
+    {
+      "id": 360007700013,
+      "title": "Plate Calculator",
+      "snippet": "Calculator is available for exercises that use plate-loaded <em>equipment</em>. Barbell exercises: Tap the Plate Calculator button",
+      "body_preview": "The Plate Calculator takes the guesswork out of loading your bar. It automatically calculates the correct number and size of plates needed on each side to match your target weight, so you can spend less time doing math and more time lifting. Table of Contents Where to Find the Plate Calculator How to Use the Plate Calculator FAQ Where to Find the Plate Calculator The Plate Calculator is available for exercises that use plate-loaded equipment. Barbell exercises: Tap the Plate Calculator button ne"
+    },
+    {
+      "id": 360019715433,
+      "title": "Stretching / Warm-up & Cool-down",
+      "snippet": "cool-down, The muscles you're training that day, The <em>equipment</em> you have available, and Your total workout length When",
+      "body_preview": "Add stretching to your workouts to warm up before training or cool down afterward. Warm-ups increase heart rate and blood flow, reduce injury risk, and improve mobility. Cool-downs return your body to a resting state, prevent lightheadedness, and reduce soreness. Table of Contents Types of stretching exercises How to enable stretching How much stretching you'll see Why you might see fewer stretches than expected FAQ Types of stretching exercises Soft Tissue Foam rolling exercises that increase b"
+    },
+    {
+      "id": 360006427813,
+      "title": "Circuits & Supersets",
+      "snippet": "exercises To move a <em>superset</em> or a circuit as a whole, you will need to short hold on the circuit or <em>superset</em> title to drag and",
+      "body_preview": "Boost intensity and efficiency with supersets and circuits! Supersets involve performing two exercises back-to-back with no rest in between. These exercises can target the same muscle group in different ways or work two different muscle groups. Circuits consist of three or more exercises (strength or cardio) performed in multiple rounds with minimal rest. This approach enhances both muscle endurance and cardiovascular fitness. Table of Contents How to Enable How to Create Circuits &amp; Superset"
+    }
+  ],
+  "goals_training_splits": [
+    {
+      "id": 15948615409687,
+      "title": "Fitness Goals",
+      "snippet": "Strength and powerlifting goals include longer rest for <em>recovery</em>. Fat loss or conditioning goals use shorter rest times to",
+      "body_preview": "Your goal determines recommended exercises, sets, reps, and intensity based on whether you want to build muscle, gain strength, or get leaner. Change your goal anytime without losing history. Future workouts adjust automatically. Table of Contents Goal Options How Your Goal Impacts Your Workouts Understanding Fat Loss vs. Weight Loss Training for Fat Loss How to Set or Change Your Fitness Goal FAQ Goal Options Goal Description Build Muscle Increase muscle size and volume through hypertrophy-focu"
+    },
+    {
+      "id": 360013245993,
+      "title": "Weekly Workout Goal, Previews & Streaks",
+      "snippet": "end of the week, your streak resets to 0. There is no grace <em>period</em>. Streaks are based on the total number of workouts logged",
+      "body_preview": "Setting a weekly workout goal helps you stay consistent with your training. It’s used for optional workout reminders and for tracking weekly progress with streaks. Set your weekly workout goal Go to My Plan . Scroll to Training Profile and tap Workouts / Week. Choose one of the following: Days Per Week : Set a weekly training frequency (for example, 3 workouts per week). Specific Days : Select exact workout days (for example, Tuesday and Thursday). If you choose specific days, you can set a Work"
+    }
+  ]
+}
