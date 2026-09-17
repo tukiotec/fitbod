@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
-import { Play, Minimize2, Bell, Smartphone, ShieldCheck, Download, Vibrate, Volume1, Volume2 } from 'lucide-react';
+import { Play, Minimize2, Bell, Smartphone, ShieldCheck, Vibrate, Volume1, Volume2 } from 'lucide-react';
 import { 
   requestNotificationPermission, 
-  isStandalonePWA, 
   getRestAlertMode, 
   setRestAlertMode, 
   triggerDeviceVibration,
@@ -23,7 +22,6 @@ interface RestTimerOverlayProps {
   onAdjustTime: (deltaSeconds: number) => void;
   onClose: () => void;
   onSkip: () => void;
-  onOpenPwaGuide?: () => void;
 }
 
 export const RestTimerOverlay: React.FC<RestTimerOverlayProps> = ({
@@ -32,22 +30,18 @@ export const RestTimerOverlay: React.FC<RestTimerOverlayProps> = ({
   nextSetInfo,
   onAdjustTime,
   onClose,
-  onSkip,
-  onOpenPwaGuide
+  onSkip
 }) => {
   const [hasNotification, setHasNotification] = useState<boolean>(() => {
     return 'Notification' in window && Notification.permission === 'granted';
   });
   const [alertMode, setAlertModeState] = useState<RestAlertMode>(() => getRestAlertMode());
-  const isPWA = isStandalonePWA();
 
   const handleEnableNotification = async () => {
     const res = await requestNotificationPermission();
     if (res === 'granted') {
       setHasNotification(true);
       triggerDeviceVibration();
-    } else if (onOpenPwaGuide) {
-      onOpenPwaGuide();
     }
   };
 
@@ -70,7 +64,7 @@ export const RestTimerOverlay: React.FC<RestTimerOverlayProps> = ({
   const strokeDashoffset = circumference - progressRatio * circumference;
 
   return (
-    <div className="fixed inset-0 z-[110] flex flex-col justify-between bg-white/98 backdrop-blur-2xl text-slate-900 p-6 animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-[110] flex flex-col justify-between bg-white/98 backdrop-blur-2xl text-slate-900 px-6 pt-[max(16px,env(safe-area-inset-top))] pb-[max(16px,env(safe-area-inset-bottom))] animate-in fade-in zoom-in-95 duration-200">
       
       {/* Top Controls Bar */}
       <div className="pt-2 space-y-2">
@@ -112,22 +106,13 @@ export const RestTimerOverlay: React.FC<RestTimerOverlayProps> = ({
                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
                 ĐÃ BẬT BÁO
               </span>
-            ) : isPWA ? (
+            ) : (
               <button
                 onClick={handleEnableNotification}
                 className="flex items-center gap-1 text-[10px] font-black text-blue-700 bg-blue-100/80 hover:bg-blue-200 px-2.5 py-1 rounded-full border border-blue-300 active:scale-95 transition animate-pulse"
               >
                 <Bell className="w-3.5 h-3.5 text-blue-600" />
                 BẬT THÔNG BÁO
-              </button>
-            ) : (
-              <button
-                onClick={onOpenPwaGuide || handleEnableNotification}
-                className="flex items-center gap-1 text-[10px] font-black text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1 rounded-full border border-indigo-200 active:scale-95 transition"
-                title="Cài đặt vào màn hình chính iPhone để nhận rung và thông báo màn hình khóa"
-              >
-                <Download className="w-3.5 h-3.5 text-indigo-600" />
-                CÀI APP MH CHÍNH
               </button>
             )}
           </div>

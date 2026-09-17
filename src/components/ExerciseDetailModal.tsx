@@ -56,7 +56,7 @@ export const ExerciseDetailModal: React.FC<ExerciseDetailModalProps> = ({
       >
         
         {/* Top Sticky Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 bg-white shrink-0">
+        <div className="flex items-center justify-between px-5 pt-[max(16px,env(safe-area-inset-top))] pb-4 border-b border-slate-100 bg-white shrink-0">
           <div>
             <h3 className="font-extrabold text-slate-900 text-lg leading-tight">
               {exercise.exerciseName}

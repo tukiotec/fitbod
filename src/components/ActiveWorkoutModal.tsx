@@ -25,7 +25,6 @@ import { PlateCalculatorModal } from './PlateCalculatorModal';
 import { CableStackModal } from './CableStackModal';
 import { ExerciseDetailModal } from './ExerciseDetailModal';
 import { RestTimerOverlay } from './RestTimerOverlay';
-import { PwaInstallModal } from './PwaInstallModal';
 import { WorkoutQueueModal } from './WorkoutQueueModal';
 import { SwapExerciseModal } from './SwapExerciseModal';
 import { EXERCISE_CATALOG, MUSCLES_INFO } from '../data/exerciseCatalog';
@@ -152,7 +151,6 @@ export const ActiveWorkoutModal: React.FC<ActiveWorkoutModalProps> = ({
     return 90;
   });
 
-  const [showPwaModal, setShowPwaModal] = useState<boolean>(false);
   const [showRestOverlay, setShowRestOverlay] = useState<boolean>(() => {
     try {
       const saved = localStorage.getItem(SESSION_STORAGE_KEY);
@@ -780,7 +778,7 @@ export const ActiveWorkoutModal: React.FC<ActiveWorkoutModalProps> = ({
       {/* ===================================================================== */}
       {/* TOP HEADER: Clean, Minimalist, Fitbod-style */}
       {/* ===================================================================== */}
-      <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md px-4 py-3 border-b border-slate-200/80 flex items-center justify-between shrink-0 shadow-2xs">
+      <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md px-4 pt-[max(12px,env(safe-area-inset-top))] pb-3 border-b border-slate-200/80 flex items-center justify-between shrink-0 shadow-2xs">
         <div className="flex items-center gap-1.5">
           <button
             onClick={onCancel}
@@ -1156,7 +1154,7 @@ export const ActiveWorkoutModal: React.FC<ActiveWorkoutModalProps> = ({
       {/* ===================================================================== */}
       {/* BOTTOM BAR: Sleek Exercise Switcher (Previous / Next) */}
       {/* ===================================================================== */}
-      <footer className="p-4 border-t border-slate-200/90 bg-white flex items-center justify-between shrink-0 shadow-lg">
+      <footer className="px-4 pt-3 pb-[max(16px,env(safe-area-inset-bottom))] border-t border-slate-200/90 bg-white flex items-center justify-between shrink-0 shadow-lg">
         <button
           disabled={currentExIndex === 0}
           onClick={() => setCurrentExIndex(prev => Math.max(0, prev - 1))}
@@ -1193,15 +1191,8 @@ export const ActiveWorkoutModal: React.FC<ActiveWorkoutModalProps> = ({
           onAdjustTime={handleAdjustRestTime}
           onClose={() => setShowRestOverlay(false)}
           onSkip={handleSkipRest}
-          onOpenPwaGuide={() => setShowPwaModal(true)}
         />
       )}
-
-      {/* PWA Home Screen Installation Guide Modal */}
-      <PwaInstallModal
-        isOpen={showPwaModal}
-        onClose={() => setShowPwaModal(false)}
-      />
 
       {/* Plate Calculator */}
       {showPlateCalc && (

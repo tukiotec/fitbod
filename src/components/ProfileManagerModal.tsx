@@ -6,7 +6,8 @@ import {
   UserPlus, 
   Check, 
   Trash2, 
-  ShieldCheck
+  ShieldCheck,
+  RotateCcw
 } from 'lucide-react';
 import { UserProfile } from '../types';
 import { 
@@ -21,9 +22,10 @@ import {
 interface ProfileManagerModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onFactoryReset?: () => void;
 }
 
-export const ProfileManagerModal: React.FC<ProfileManagerModalProps> = ({ isOpen, onClose }) => {
+export const ProfileManagerModal: React.FC<ProfileManagerModalProps> = ({ isOpen, onClose, onFactoryReset }) => {
   const [profiles, setProfiles] = useState<UserProfile[]>(getProfiles);
   const [activeId, setActiveId] = useState<string>(getActiveProfileId);
   const [newProfileName, setNewProfileName] = useState<string>('');
@@ -242,6 +244,20 @@ export const ProfileManagerModal: React.FC<ProfileManagerModalProps> = ({ isOpen
               Mỗi hồ sơ có lịch sử sets, tạ, bài tập và % phục hồi cơ bắp độc lập hoàn toàn.
             </p>
           </div>
+
+          {/* Khôi Phục Cài Đặt Gốc */}
+          {onFactoryReset && (
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={onFactoryReset}
+                className="w-full py-3.5 px-4 bg-red-50 hover:bg-red-100 active:scale-[0.99] text-red-600 font-black text-xs rounded-2xl border border-red-200/80 shadow-xs flex items-center justify-center gap-2 transition"
+              >
+                <RotateCcw className="w-4 h-4 text-red-500" />
+                <span>Xóa Toàn Bộ Dữ Liệu & Làm Lại Từ Đầu</span>
+              </button>
+            </div>
+          )}
 
         </div>
 

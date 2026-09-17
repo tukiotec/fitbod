@@ -18,6 +18,48 @@ import {
 import { EXERCISE_CATALOG, MUSCLES_INFO } from '../data/exerciseCatalog';
 
 /**
+ * Hàm làm tròn mức tạ theo bước tạ gym thực tế chuẩn quốc tế:
+ * - Tạ đòn (Barbell): bước 2.5kg, min 20kg (Olympic Bar tiêu chuẩn)
+ * - Tạ đơn (Dumbbell): bước 2kg (mỗi bên tay), min 4kg (4, 6, 8, 10, 12, 14, 16, 18, 20...) - Tuyệt đối không sinh số lẻ kì quặc
+ * - Máy cáp (Cable): bước 2.5kg, min 5kg
+ * - Máy khối (Machine): bước 5kg, min 10kg (riêng Leg Press đạp đùi làm tròn bước 10kg, min 40kg)
+ * - Bodyweight: 0kg
+ */
+export function roundGymWeight(
+  rawWeight: number,
+  equipment: EquipmentType,
+  exerciseId?: string
+): number {
+  if (equipment === 'bodyweight') return 0;
+
+  if (equipment === 'barbell') {
+    // Tạ đòn: bước 2.5kg, tối thiểu 20kg (đòn Olympic chuẩn gym)
+    return Math.max(20, Math.round(rawWeight / 2.5) * 2.5);
+  }
+
+  if (equipment === 'dumbbell') {
+    // Tạ đơn mỗi bên: bước 2kg, tối thiểu 4kg (4kg, 6kg, 8kg, 10kg, 12kg... Tuyệt đối không sinh số lẻ 3, 5, 7kg)
+    return Math.max(4, Math.round(rawWeight / 2) * 2);
+  }
+
+  if (equipment === 'cable') {
+    // Máy cáp: bước 2.5kg, tối thiểu 5kg
+    return Math.max(5, Math.round(rawWeight / 2.5) * 2.5);
+  }
+
+  if (equipment === 'machine') {
+    if (exerciseId && exerciseId.includes('leg_press')) {
+      // Đạp đùi Leg Press: bước 10kg, min 40kg
+      return Math.max(40, Math.round(rawWeight / 10) * 10);
+    }
+    // Máy khối khác: bước 5kg, tối thiểu 10kg
+    return Math.max(10, Math.round(rawWeight / 5) * 5);
+  }
+
+  return Math.max(2.5, Math.round(rawWeight / 2.5) * 2.5);
+}
+
+/**
  * Thuật toán tính mức tạ chuẩn khoa học cá nhân hóa theo % Bodyweight & Trình độ
  * Dựa trên chuẩn Strength Standards NSCA & ExRx, tối ưu theo Mục tiêu tập (Goal) & Giới tính
  */
@@ -86,9 +128,7 @@ export function calculateTailoredWeight(
       rawWeight = effectiveBw * mult * genderRatio * goalRatio;
     }
 
-    // Tạ đòn: Min 20kg (nam) hoặc 15kg (nữ), làm tròn bước 2.5kg
-    const minBar = isFemale ? 15 : 20;
-    return Math.max(minBar, Math.round(rawWeight / 2.5) * 2.5);
+    return roundGymWeight(rawWeight, 'barbell', exercise.id);
   }
 
   if (exercise.equipment === 'dumbbell') {
@@ -96,32 +136,28 @@ export function calculateTailoredWeight(
     if (exercise.id.includes('lateral_raise') || exercise.id.includes('front_raise')) {
       const mult = level === 'beginner' ? 0.05 : level === 'advanced' ? 0.09 : 0.14;
       rawWeight = effectiveBw * mult * genderRatio * goalRatio;
-      return Math.max(2, Math.round(rawWeight / 1) * 1);
     } else if (exercise.id.includes('curl')) {
       // DB Curl
       const mult = level === 'beginner' ? 0.09 : level === 'advanced' ? 0.15 : 0.22;
       rawWeight = effectiveBw * mult * genderRatio * goalRatio;
-      return Math.max(2, Math.round(rawWeight / 2) * 2);
     } else if (exercise.id.includes('shoulder_press') || exercise.movementPattern === 'vertical_push') {
       // DB Shoulder Press
       const mult = level === 'beginner' ? 0.12 : level === 'advanced' ? 0.22 : 0.32;
       rawWeight = effectiveBw * mult * genderRatio * goalRatio;
-      return Math.max(4, Math.round(rawWeight / 2) * 2);
     } else if (exercise.movementPattern === 'horizontal_push' || exercise.id.includes('bench')) {
       // DB Bench Press
       const mult = level === 'beginner' ? 0.16 : level === 'advanced' ? 0.28 : 0.40;
       rawWeight = effectiveBw * mult * genderRatio * goalRatio;
-      return Math.max(4, Math.round(rawWeight / 2) * 2);
     } else if (exercise.id.includes('row')) {
       // DB Row
       const mult = level === 'beginner' ? 0.14 : level === 'advanced' ? 0.25 : 0.36;
       rawWeight = effectiveBw * mult * genderRatio * goalRatio;
-      return Math.max(4, Math.round(rawWeight / 2) * 2);
     } else {
       const mult = level === 'beginner' ? 0.10 : level === 'advanced' ? 0.18 : 0.26;
       rawWeight = effectiveBw * mult * genderRatio * goalRatio;
-      return Math.max(2, Math.round(rawWeight / 2) * 2);
     }
+
+    return roundGymWeight(rawWeight, 'dumbbell', exercise.id);
   }
 
   if (exercise.equipment === 'cable') {
@@ -142,7 +178,7 @@ export function calculateTailoredWeight(
       const mult = level === 'beginner' ? 0.16 : level === 'advanced' ? 0.26 : 0.38;
       rawWeight = effectiveBw * mult * genderRatio * goalRatio;
     }
-    return Math.max(2.5, Math.round(rawWeight / 2.5) * 2.5);
+    return roundGymWeight(rawWeight, 'cable', exercise.id);
   }
 
   if (exercise.equipment === 'machine') {
@@ -150,21 +186,18 @@ export function calculateTailoredWeight(
     if (exercise.id.includes('leg_press')) {
       const mult = level === 'beginner' ? 1.20 : level === 'advanced' ? 2.20 : 3.20;
       rawWeight = effectiveBw * mult * genderRatio * goalRatio;
-      return Math.max(40, Math.round(rawWeight / 10) * 10);
     } else if (exercise.id.includes('leg_curl') || exercise.id.includes('leg_extension')) {
       const mult = level === 'beginner' ? 0.35 : level === 'advanced' ? 0.60 : 0.85;
       rawWeight = effectiveBw * mult * genderRatio * goalRatio;
-      return Math.max(10, Math.round(rawWeight / 5) * 5);
     } else if (exercise.id.includes('calf')) {
       const mult = level === 'beginner' ? 0.50 : level === 'advanced' ? 0.90 : 1.30;
       rawWeight = effectiveBw * mult * genderRatio * goalRatio;
-      return Math.max(15, Math.round(rawWeight / 5) * 5);
     } else {
       // Machine Chest Press / Shoulder Press / Row
       const mult = level === 'beginner' ? 0.40 : level === 'advanced' ? 0.70 : 1.00;
       rawWeight = effectiveBw * mult * genderRatio * goalRatio;
-      return Math.max(10, Math.round(rawWeight / 5) * 5);
     }
+    return roundGymWeight(rawWeight, 'machine', exercise.id);
   }
 
   return 20;
@@ -358,9 +391,13 @@ export function calculateCompletedWorkoutFatigue(
  * - Tier 1 (Bài tạ đòn nặng: Squat, Deadlift, Bench Press, Barbell Row, OHP): 90s (Hypertrophy) / 120s (Strength)
  */
 export function calculateExerciseRestSeconds(
-  ex: { tier?: number; primaryMuscles?: any[] },
+  ex: { tier?: number; primaryMuscles?: any[]; isCardio?: boolean; exerciseId?: string; id?: string },
   goal: FitnessGoal = 'hypertrophy'
 ): number {
+  if (ex.isCardio || ex.exerciseId?.startsWith('cardio_') || ex.id?.startsWith('cardio_')) {
+    return 0;
+  }
+
   const tier = ex.tier || 2;
   const muscles = (ex.primaryMuscles || []).map((m: any) => {
     if (typeof m === 'string') return m.toLowerCase();
@@ -375,10 +412,10 @@ export function calculateExerciseRestSeconds(
     m.includes('abs') || m.includes('bụng') || m.includes('forearm') || m.includes('cẳng tay')
   );
 
-  if (isSmallMuscle || tier === 3) {
+  if (isSmallMuscle || tier === 3 || tier === 4) {
     if (goal === 'strength') return 60;
     if (goal === 'tone') return 30;
-    return 45; // 45 giây cho nhóm cơ nhỏ
+    return 45; // 45 giây cho nhóm cơ nhỏ & cơ bụng
   }
 
   if (tier === 1) {
@@ -391,6 +428,158 @@ export function calculateExerciseRestSeconds(
   if (goal === 'strength') return 90;
   if (goal === 'tone') return 45;
   return 60; // 60 giây (1 phút) chuẩn cho bài máy và kéo xô
+}
+
+/**
+ * Phân tầng thứ tự bài tập chuẩn y học thể hình (NSCA / Fitbod Standard):
+ * 1. Tier 1 (Compound nặng: Bench Press, Leg Press, Barbell Row...): Luôn nằm đầu buổi khi hệ thần kinh và cơ bắp sung sức nhất.
+ * 2. Tier 2 (Secondary Compound / Máy khối / Tạ đôi: Incline DB, Lat Pulldown, Seated Cable Row...): Nằm ở giữa buổi.
+ * 3. Tier 3 (Isolation cơ nhỏ: Bay vai ngang, Cuốn bắp tay, Duỗi tay sau, Nhón bắp chân...): Nằm ở nửa sau buổi tập.
+ * 4. Tier 4 (Core & Cardio: Plank, Gập bụng, Máy chạy/xe đạp): Luôn nằm ở cuối cùng của buổi tập.
+ */
+export function getExerciseTierOrder(ex: {
+  id?: string;
+  exerciseId?: string;
+  tier?: number;
+  equipment?: EquipmentType;
+  movementPattern?: string;
+  primaryMuscles?: any[];
+  isCardio?: boolean;
+}): number {
+  const id = ex.exerciseId || ex.id || '';
+  // Cardio luôn ở vị trí tuyệt đối sau cùng của buổi tập (Tier 4.5)
+  if (id.startsWith('cardio_') || ex.movementPattern === 'cardio' || ex.isCardio) {
+    return 4.5;
+  }
+  // Core (Bụng & Lõi) luôn ở nửa cuối (Tier 4.0)
+  if (
+    id === 'plank' ||
+    id === 'cable_crunch' ||
+    id === 'hanging_leg_raise' ||
+    id === 'cable_woodchopper' ||
+    ex.movementPattern === 'core'
+  ) {
+    return 4.0;
+  }
+  const muscles = (ex.primaryMuscles || []).map((m: any) => {
+    if (typeof m === 'string') return m.toLowerCase();
+    if (m && typeof m.muscle === 'string') return m.muscle.toLowerCase();
+    return '';
+  });
+  if (muscles.some(m => m === 'abs' || m.includes('bụng') || m.includes('core'))) {
+    return 4.0;
+  }
+  // Leg Press (Đạp đùi) là bài Compound nặng Tier 1 theo chuẩn NSCA
+  if (id === 'leg_press') {
+    return 1.0;
+  }
+  return ex.tier || 2;
+}
+
+/**
+ * Trả về khóa nhận diện góc tác động / chuyển động (Angle Diversity Key)
+ * Ngăn chặn tuyệt đối việc sinh ra 2 bài cùng 1 góc đẩy phẳng hoặc cùng dạng chuyển động trong 1 buổi tập
+ */
+export function getExerciseAngleDiversityKey(ex: ExerciseItem): string {
+  const id = ex.id;
+  const primaryMuscle = ex.primaryMuscles[0]?.muscle || '';
+
+  // 1. CHEST (Ngực)
+  if (primaryMuscle === 'chest') {
+    if (id === 'incline_barbell_bench_press' || id === 'incline_dumbbell_press' || id === 'incline_chest_press_machine') {
+      return 'chest_incline_press';
+    }
+    if (id === 'decline_dumbbell_press' || id === 'chest_dip') {
+      return 'chest_decline_dips';
+    }
+    if (id === 'cable_chest_fly' || id === 'incline_cable_fly' || id === 'decline_cable_fly' || id === 'pec_deck_machine') {
+      return 'chest_fly';
+    }
+    if (id === 'barbell_bench_press' || id === 'dumbbell_bench_press' || id === 'chest_press_machine' || id === 'push_up') {
+      return 'chest_flat_press';
+    }
+  }
+
+  // 2. SHOULDERS (Vai & Cầu vai)
+  if (primaryMuscle === 'shoulders' || primaryMuscle === 'traps') {
+    if (id === 'overhead_press' || id === 'dumbbell_shoulder_press' || id === 'arnold_press') {
+      return 'shoulder_overhead_press';
+    }
+    if (id === 'dumbbell_lateral_raise' || id === 'cable_lateral_raise') {
+      return 'shoulder_lateral_raise';
+    }
+    if (id === 'face_pull' || id === 'dumbbell_rear_delt_fly' || id === 'reverse_pec_deck') {
+      return 'shoulder_rear_delt';
+    }
+    if (id === 'barbell_shrug') {
+      return 'shoulder_shrug';
+    }
+  }
+
+  // 3. BACK (Lưng xô & Lưng dưới)
+  if (primaryMuscle === 'lats' || primaryMuscle === 'upper_back' || primaryMuscle === 'lower_back') {
+    if (id === 'deadlift') return 'back_deadlift';
+    if (id === 'back_extension') return 'back_hyperextension';
+    if (id === 'straight_arm_pulldown') return 'back_straight_arm';
+    if (id === 'pull_up') return 'back_pull_up';
+    if (id === 'lat_pulldown') return 'back_lat_pulldown';
+    if (id === 'chin_up') return 'back_chin_up';
+    if (id === 'close_grip_lat_pulldown') return 'back_close_lat_pulldown';
+    if (id === 'barbell_row') return 'back_barbell_row';
+    if (id === 'tbar_row') return 'back_tbar_row';
+    if (id === 'dumbbell_row') return 'back_dumbbell_row';
+    if (id === 'seated_cable_row') return 'back_seated_cable_row';
+  }
+
+  // 4. BICEPS (Tay trước & Cẳng tay)
+  if (primaryMuscle === 'biceps' || primaryMuscle === 'forearms') {
+    if (id === 'barbell_curl' || id === 'cable_bicep_curl') return 'biceps_regular_curl';
+    if (id === 'dumbbell_hammer_curl') return 'biceps_hammer_curl';
+    if (id === 'dumbbell_incline_curl') return 'biceps_incline_curl';
+    if (id === 'ez_bar_preacher_curl') return 'biceps_preacher_curl';
+  }
+
+  // 5. TRICEPS (Tay sau)
+  if (primaryMuscle === 'triceps') {
+    if (id === 'tricep_rope_pushdown' || id === 'cable_straight_bar_pushdown') return 'triceps_pushdown';
+    if (id === 'overhead_cable_tricep_extension' || id === 'dumbbell_seated_tricep_extension') return 'triceps_overhead';
+    if (id === 'skull_crushers' || id === 'close_grip_bench_press' || id === 'dumbbell_tricep_kickback') return 'triceps_extension_press';
+  }
+
+  // 6. QUADS (Đùi trước)
+  if (primaryMuscle === 'quads') {
+    if (id === 'barbell_squat' || id === 'barbell_front_squat') return 'quads_heavy_squat';
+    if (id === 'leg_press') return 'quads_leg_press';
+    if (id === 'bulgarian_split_squat' || id === 'goblet_squat') return 'quads_unilateral_squat';
+    if (id === 'leg_extension') return 'quads_isolation';
+  }
+
+  // 7. HAMSTRINGS (Đùi sau)
+  if (primaryMuscle === 'hamstrings') {
+    if (id === 'romanian_deadlift' || id === 'dumbbell_rdl') return 'hamstrings_rdl';
+    if (id === 'lying_leg_curl' || id === 'seated_leg_curl') return 'hamstrings_curl';
+  }
+
+  // 8. GLUTES (Mông)
+  if (primaryMuscle === 'glutes') {
+    if (id === 'barbell_hip_thrust') return 'glutes_thrust';
+    if (id === 'cable_glute_kickback') return 'glutes_kickback';
+  }
+
+  // 9. CALVES (Bắp chân)
+  if (primaryMuscle === 'calves') {
+    if (id === 'standing_calf_raise') return 'calves_standing';
+    if (id === 'seated_calf_raise') return 'calves_seated';
+  }
+
+  // 10. ABS / CORE (Cơ bụng)
+  if (primaryMuscle === 'abs') {
+    if (id === 'cable_crunch' || id === 'hanging_leg_raise') return 'abs_flexion';
+    if (id === 'plank') return 'abs_isometric';
+    if (id === 'cable_woodchopper') return 'abs_rotational';
+  }
+
+  return `${primaryMuscle}_${ex.movementPattern}_${id}`;
 }
 
 export function generateSmartWorkout(
@@ -485,38 +674,73 @@ export function generateSmartWorkout(
   });
 
   // 4. Phân bổ đồng đều số lượng bài tập (Balanced Representation - Đảm bảo ngực và tay sau đều có bài)
+  // KẾT HỢP ANGLE DIVERSITY: Không để sinh ra 2 bài cùng 1 góc đẩy phẳng hoặc cùng dạng chuyển động trong 1 buổi tập
   const count = Math.min(eligible.length, Math.max(4, Math.floor(durationMinutes / 10)));
   const selected: ExerciseItem[] = [];
   const selectedIds = new Set<string>();
+  const selectedAngleKeys = new Set<string>();
 
   const numMuscles = candidateMuscles.length;
   const basePerMuscle = Math.max(1, Math.floor(count / numMuscles));
 
-  // Vòng 1: Lấy tối thiểu basePerMuscle bài cho MỌI nhóm cơ đã chọn
+  // Vòng 1: Lấy tối thiểu basePerMuscle bài cho MỌI nhóm cơ đã chọn (ưu tiên góc chuyển động đa dạng chưa xuất hiện)
   candidateMuscles.forEach(m => {
     let taken = 0;
+    // 1a. Thử chọn bài chưa trùng ID VÀ chưa trùng góc tác động
     for (const ex of byMuscle[m]) {
-      if (taken < basePerMuscle && !selectedIds.has(ex.id)) {
+      if (taken >= basePerMuscle) break;
+      const angleKey = getExerciseAngleDiversityKey(ex);
+      if (!selectedIds.has(ex.id) && !selectedAngleKeys.has(angleKey)) {
         selected.push(ex);
         selectedIds.add(ex.id);
+        selectedAngleKeys.add(angleKey);
         taken++;
+      }
+    }
+    // 1b. Fallback nếu nhóm cơ ít bài và chưa lấy đủ basePerMuscle
+    if (taken < basePerMuscle) {
+      for (const ex of byMuscle[m]) {
+        if (taken >= basePerMuscle) break;
+        if (!selectedIds.has(ex.id)) {
+          selected.push(ex);
+          selectedIds.add(ex.id);
+          selectedAngleKeys.add(getExerciseAngleDiversityKey(ex));
+          taken++;
+        }
       }
     }
   });
 
-  // Vòng 2: Phân bổ các slot còn lại theo vòng tròn cho các nhóm cơ có bài tập chất lượng
+  // Vòng 2: Phân bổ các slot còn lại theo vòng tròn cho các nhóm cơ (Ưu tiên bài chưa trùng góc)
   for (const m of candidateMuscles) {
     if (selected.length >= count) break;
     for (const ex of byMuscle[m]) {
-      if (!selectedIds.has(ex.id)) {
+      const angleKey = getExerciseAngleDiversityKey(ex);
+      if (!selectedIds.has(ex.id) && !selectedAngleKeys.has(angleKey)) {
         selected.push(ex);
         selectedIds.add(ex.id);
+        selectedAngleKeys.add(angleKey);
         break;
       }
     }
   }
 
-  // Vòng 3: Nếu vẫn còn thiếu slot (do nhóm cơ nào đó ít bài), lấy tiếp từ danh sách chung
+  // Vòng 3: Nếu vẫn còn thiếu slot (do các bài còn lại bị trùng góc), cho phép lấy thêm bài tốt nhất
+  if (selected.length < count) {
+    for (const m of candidateMuscles) {
+      if (selected.length >= count) break;
+      for (const ex of byMuscle[m]) {
+        if (selected.length >= count) break;
+        if (!selectedIds.has(ex.id)) {
+          selected.push(ex);
+          selectedIds.add(ex.id);
+          selectedAngleKeys.add(getExerciseAngleDiversityKey(ex));
+        }
+      }
+    }
+  }
+
+  // Vòng 4: Fallback cuối cùng từ danh sách eligible chung nếu vẫn thiếu slot
   if (selected.length < count) {
     const remainingEligible = [...eligible].sort((a, b) => getExerciseScore(b) - getExerciseScore(a));
     for (const ex of remainingEligible) {
@@ -528,8 +752,8 @@ export function generateSmartWorkout(
     }
   }
 
-  // 5. Sắp xếp thứ tự buổi tập: Bài Compound nặng (Tier 1) tập trước, đến Tier 2, rồi Isolation (Tier 3)
-  selected.sort((a, b) => a.tier - b.tier);
+  // 5. Sắp xếp sơ bộ các bài tập được chọn
+  selected.sort((a, b) => getExerciseTierOrder(a) - getExerciseTierOrder(b));
 
   // 5. Thuật toán kích hoạt MAX EFFORT DAY chuẩn Fitbod:
   // Quy tắc chuẩn từ Fitbod Help Center:
@@ -590,9 +814,8 @@ export function generateSmartWorkout(
     let currentSetIndex = 1;
 
     // A. Thêm hiệp khởi động (Warmup) nếu được chọn bật
-    if (includeWarmup && ex.tier === 1) {
-      const minW = ex.equipment === 'barbell' ? 20 : 2.5;
-      const w1 = Math.max(minW, Math.round((targetWeight * 0.5) / 2.5) * 2.5);
+    if (includeWarmup && (ex.tier === 1 || getExerciseTierOrder(ex) === 1)) {
+      const w1 = roundGymWeight(targetWeight * 0.5, ex.equipment, ex.id);
       sets.push({
         setIndex: currentSetIndex++,
         type: 'warmup',
@@ -601,8 +824,9 @@ export function generateSmartWorkout(
         isCompleted: false
       });
 
-      if (targetWeight > (ex.equipment === 'barbell' ? 45 : 20)) {
-        const w2 = Math.max(minW, Math.round((targetWeight * 0.7) / 2.5) * 2.5);
+      const threshold = ex.equipment === 'barbell' ? 45 : (ex.equipment === 'dumbbell' ? 16 : 25);
+      if (targetWeight > threshold) {
+        const w2 = roundGymWeight(targetWeight * 0.7, ex.equipment, ex.id);
         sets.push({
           setIndex: currentSetIndex++,
           type: 'warmup',
@@ -613,8 +837,7 @@ export function generateSmartWorkout(
       }
     } else if (includeWarmup) {
       // Tier 2 & Tier 3: Thêm 1 hiệp khởi động nhẹ làm nóng khớp
-      const minW = ex.equipment === 'barbell' ? 20 : 2.5;
-      const w1 = Math.max(minW, Math.round((targetWeight * 0.5) / 2.5) * 2.5);
+      const w1 = roundGymWeight(targetWeight * 0.5, ex.equipment, ex.id);
       sets.push({
         setIndex: currentSetIndex++,
         type: 'warmup',
@@ -692,6 +915,31 @@ export function generateSmartWorkout(
     }
   }
 
+  // 8. BẮT BUỘC sắp xếp (sort) danh sách plannedExercises theo chuẩn NSCA / Fitbod Standard:
+  // - Tier 1 (Compound nặng: Bench Press, Leg Press, Barbell Row...): Đầu buổi khi hệ thần kinh và cơ bắp sung sức nhất.
+  // - Tier 2 (Secondary Compound / Máy khối / Tạ đôi: Incline DB, Lat Pulldown, Seated Cable Row...): Giữa buổi.
+  // - Tier 3 (Isolation cơ nhỏ: Bay vai ngang, Cuốn bắp tay, Duỗi tay sau, Nhón bắp chân...): Nửa sau buổi tập.
+  // - Tier 4 (Core & Cardio: Plank, Gập bụng, Máy chạy/xe đạp): Luôn nằm ở cuối cùng của buổi tập.
+  plannedExercises.sort((a, b) => {
+    const tierA = getExerciseTierOrder(a);
+    const tierB = getExerciseTierOrder(b);
+    if (tierA !== tierB) return tierA - tierB;
+
+    // Trong cùng Tier 1: Ưu tiên Barbell compound trước các máy
+    if (tierA === 1) {
+      if (a.equipment === 'barbell' && b.equipment !== 'barbell') return -1;
+      if (b.equipment === 'barbell' && a.equipment !== 'barbell') return 1;
+    }
+
+    // Trong cùng Tier 4: Core (Tier 4.0) trước Cardio (Tier 4.5)
+    if (tierA >= 4 && tierB >= 4) {
+      if (a.isCardio && !b.isCardio) return 1;
+      if (!a.isCardio && b.isCardio) return -1;
+    }
+
+    return 0;
+  });
+
   let title = 'Buổi tập cá nhân hóa';
   if (isCustom) {
     const names = candidateMuscles.map(m => MUSCLES_INFO[m]?.nameVi || m).slice(0, 3).join(' • ');
@@ -725,18 +973,312 @@ export function generateSmartWorkout(
 }
 
 /**
- * Trình phân tích chuỗi CSV Fitbod WorkoutExport.csv trực tiếp trên trình duyệt
+ * Bảng ánh xạ từ điển tên bài tập tiếng Anh trong file Fitbod WorkoutExport.csv
+ * sang ID bài tập chuẩn trong Catalog của hệ thống
  */
-export function parseFitbodCsvText(csvText: string): {
+export const FITBOD_EXERCISE_ALIAS_MAP: Record<string, string> = {
+  // Ngực (Chest)
+  'bench press': 'barbell_bench_press',
+  'barbell bench press': 'barbell_bench_press',
+  'flat bench press': 'barbell_bench_press',
+  'flat barbell bench press': 'barbell_bench_press',
+  'incline bench press': 'incline_barbell_bench_press',
+  'incline barbell bench press': 'incline_barbell_bench_press',
+  'incline dumbbell press': 'incline_dumbbell_press',
+  'incline dumbbell bench press': 'incline_dumbbell_press',
+  'dumbbell bench press': 'dumbbell_bench_press',
+  'flat dumbbell bench press': 'dumbbell_bench_press',
+  'decline dumbbell press': 'decline_dumbbell_press',
+  'decline dumbbell bench press': 'decline_dumbbell_press',
+  'cable crossover': 'cable_chest_fly',
+  'cable fly': 'cable_chest_fly',
+  'cable chest fly': 'cable_chest_fly',
+  'incline cable fly': 'incline_cable_fly',
+  'low to high cable fly': 'incline_cable_fly',
+  'decline cable fly': 'decline_cable_fly',
+  'high to low cable fly': 'decline_cable_fly',
+  'pec deck': 'pec_deck_machine',
+  'pec deck fly': 'pec_deck_machine',
+  'pec deck machine fly': 'pec_deck_machine',
+  'pec deck machine': 'pec_deck_machine',
+  'chest press': 'chest_press_machine',
+  'chest press machine': 'chest_press_machine',
+  'machine chest press': 'chest_press_machine',
+  'incline chest press machine': 'incline_chest_press_machine',
+  'incline machine chest press': 'incline_chest_press_machine',
+  'dips': 'chest_dip',
+  'chest dip': 'chest_dip',
+  'chest dips': 'chest_dip',
+  'push up': 'push_up',
+  'pushup': 'push_up',
+  'push-up': 'push_up',
+  'standard push up': 'push_up',
+
+  // Lưng xô (Back)
+  'deadlift': 'deadlift',
+  'barbell deadlift': 'deadlift',
+  'conventional deadlift': 'deadlift',
+  'barbell conventional deadlift': 'deadlift',
+  'barbell row': 'barbell_row',
+  'barbell bent over row': 'barbell_row',
+  'barbell bent-over row': 'barbell_row',
+  'bent over row': 'barbell_row',
+  'bent-over row': 'barbell_row',
+  'dumbbell row': 'dumbbell_row',
+  'single arm dumbbell row': 'dumbbell_row',
+  'single-arm dumbbell row': 'dumbbell_row',
+  'one arm dumbbell row': 'dumbbell_row',
+  'lat pulldown': 'lat_pulldown',
+  'cable lat pulldown': 'lat_pulldown',
+  'cable front lat pulldown': 'lat_pulldown',
+  'front lat pulldown': 'lat_pulldown',
+  'close grip lat pulldown': 'close_grip_lat_pulldown',
+  'close-grip lat pulldown': 'close_grip_lat_pulldown',
+  'seated cable row': 'seated_cable_row',
+  'seated row': 'seated_cable_row',
+  'cable row': 'seated_cable_row',
+  'straight arm pulldown': 'straight_arm_pulldown',
+  'straight-arm pulldown': 'straight_arm_pulldown',
+  'straight arm cable pulldown': 'straight_arm_pulldown',
+  't-bar row': 'tbar_row',
+  'tbar row': 'tbar_row',
+  'chest-supported t-bar row': 'tbar_row',
+  'pull up': 'pull_up',
+  'pull-up': 'pull_up',
+  'pullup': 'pull_up',
+  'chin up': 'chin_up',
+  'chin-up': 'chin_up',
+  'chinup': 'chin_up',
+  'back extension': 'back_extension',
+  'hyperextension': 'back_extension',
+  'hyperextensions': 'back_extension',
+
+  // Vai & Cầu vai (Shoulders & Traps)
+  'overhead press': 'overhead_press',
+  'barbell overhead press': 'overhead_press',
+  'military press': 'overhead_press',
+  'standing overhead press': 'overhead_press',
+  'dumbbell shoulder press': 'dumbbell_shoulder_press',
+  'seated dumbbell shoulder press': 'dumbbell_shoulder_press',
+  'arnold press': 'arnold_press',
+  'arnold dumbbell press': 'arnold_press',
+  'lateral raise': 'dumbbell_lateral_raise',
+  'dumbbell lateral raise': 'dumbbell_lateral_raise',
+  'side lateral raise': 'dumbbell_lateral_raise',
+  'side raise': 'dumbbell_lateral_raise',
+  'cable lateral raise': 'cable_lateral_raise',
+  'face pull': 'face_pull',
+  'cable face pull': 'face_pull',
+  'rear delt fly': 'dumbbell_rear_delt_fly',
+  'dumbbell rear delt fly': 'dumbbell_rear_delt_fly',
+  'reverse fly': 'dumbbell_rear_delt_fly',
+  'reverse pec deck': 'reverse_pec_deck',
+  'reverse fly machine': 'reverse_pec_deck',
+  'shrug': 'barbell_shrug',
+  'barbell shrug': 'barbell_shrug',
+  'dumbbell shrug': 'barbell_shrug',
+
+  // Tay trước (Biceps)
+  'bicep curl': 'barbell_curl',
+  'barbell curl': 'barbell_curl',
+  'barbell bicep curl': 'barbell_curl',
+  'incline dumbbell curl': 'dumbbell_incline_curl',
+  'incline dumbbell bicep curl': 'dumbbell_incline_curl',
+  'incline bicep curl': 'dumbbell_incline_curl',
+  'hammer curl': 'dumbbell_hammer_curl',
+  'dumbbell hammer curl': 'dumbbell_hammer_curl',
+  'preacher curl': 'ez_bar_preacher_curl',
+  'ez-bar preacher curl': 'ez_bar_preacher_curl',
+  'ez bar preacher curl': 'ez_bar_preacher_curl',
+  'cable curl': 'cable_bicep_curl',
+  'cable bicep curl': 'cable_bicep_curl',
+  'standing cable bicep curl': 'cable_bicep_curl',
+
+  // Tay sau (Triceps)
+  'tricep pushdown': 'tricep_rope_pushdown',
+  'triceps pushdown': 'tricep_rope_pushdown',
+  'cable pushdown': 'tricep_rope_pushdown',
+  'cable tricep pushdown': 'tricep_rope_pushdown',
+  'cable tricep rope pushdown': 'tricep_rope_pushdown',
+  'rope pushdown': 'tricep_rope_pushdown',
+  'cable straight bar pushdown': 'cable_straight_bar_pushdown',
+  'cable straight-bar tricep pushdown': 'cable_straight_bar_pushdown',
+  'straight bar pushdown': 'cable_straight_bar_pushdown',
+  'overhead cable tricep extension': 'overhead_cable_tricep_extension',
+  'cable overhead tricep extension': 'overhead_cable_tricep_extension',
+  'skull crusher': 'skull_crushers',
+  'skull crushers': 'skull_crushers',
+  'skullcrusher': 'skull_crushers',
+  'barbell skull crushers': 'skull_crushers',
+  'lying triceps extension': 'skull_crushers',
+  'close grip bench press': 'close_grip_bench_press',
+  'close-grip bench press': 'close_grip_bench_press',
+  'close-grip barbell bench press': 'close_grip_bench_press',
+  'dumbbell overhead tricep extension': 'dumbbell_seated_tricep_extension',
+  'seated dumbbell overhead tricep extension': 'dumbbell_seated_tricep_extension',
+  'tricep kickback': 'dumbbell_tricep_kickback',
+  'dumbbell tricep kickback': 'dumbbell_tricep_kickback',
+
+  // Chân & Mông (Legs & Glutes)
+  'squat': 'barbell_squat',
+  'back squat': 'barbell_squat',
+  'barbell squat': 'barbell_squat',
+  'barbell back squat': 'barbell_squat',
+  'front squat': 'barbell_front_squat',
+  'barbell front squat': 'barbell_front_squat',
+  'leg press': 'leg_press',
+  'leg press 45': 'leg_press',
+  'leg press 45°': 'leg_press',
+  'leg extension': 'leg_extension',
+  'leg extension machine': 'leg_extension',
+  'bulgarian split squat': 'bulgarian_split_squat',
+  'dumbbell bulgarian split squat': 'bulgarian_split_squat',
+  'goblet squat': 'goblet_squat',
+  'dumbbell goblet squat': 'goblet_squat',
+  'romanian deadlift': 'romanian_deadlift',
+  'barbell romanian deadlift': 'romanian_deadlift',
+  'rdl': 'romanian_deadlift',
+  'barbell rdl': 'romanian_deadlift',
+  'dumbbell romanian deadlift': 'dumbbell_rdl',
+  'dumbbell rdl': 'dumbbell_rdl',
+  'leg curl': 'lying_leg_curl',
+  'lying leg curl': 'lying_leg_curl',
+  'lying leg curl machine': 'lying_leg_curl',
+  'seated leg curl': 'seated_leg_curl',
+  'seated leg curl machine': 'seated_leg_curl',
+  'hip thrust': 'barbell_hip_thrust',
+  'barbell hip thrust': 'barbell_hip_thrust',
+  'glute kickback': 'cable_glute_kickback',
+  'cable glute kickback': 'cable_glute_kickback',
+  'calf raise': 'standing_calf_raise',
+  'standing calf raise': 'standing_calf_raise',
+  'seated calf raise': 'seated_calf_raise',
+
+  // Cơ bụng & Cardio (Abs & Cardio)
+  'woodchopper': 'cable_woodchopper',
+  'cable woodchopper': 'cable_woodchopper',
+  'cable crunch': 'cable_crunch',
+  'kneeling cable crunch': 'cable_crunch',
+  'hanging leg raise': 'hanging_leg_raise',
+  'plank': 'plank',
+  'standard plank': 'plank',
+  'stationary bike': 'cardio_bike',
+  'bike': 'cardio_bike',
+  'treadmill': 'cardio_treadmill',
+  'incline treadmill walk': 'cardio_treadmill',
+  'elliptical': 'cardio_elliptical',
+  'elliptical trainer': 'cardio_elliptical'
+};
+
+/**
+ * Ánh xạ tên bài tập từ Fitbod CSV sang Exercise Catalog
+ */
+export function mapFitbodExerciseToCatalog(rawName: string): { id: string; name: string } {
+  if (!rawName) return { id: 'unknown', name: 'Unknown Exercise' };
+
+  const clean = rawName
+    .replace(/\(.*?\)/g, '')
+    .replace(/[^a-zA-Z0-9\s]/g, ' ')
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, ' ');
+
+  // 1. Đối soát từ điển Alias
+  if (FITBOD_EXERCISE_ALIAS_MAP[clean]) {
+    const matchedId = FITBOD_EXERCISE_ALIAS_MAP[clean];
+    const cat = EXERCISE_CATALOG.find(c => c.id === matchedId);
+    if (cat) return { id: cat.id, name: cat.name };
+  }
+
+  // 2. Đối soát trực tiếp ID hoặc tên tiếng Anh trong Catalog
+  const directCat = EXERCISE_CATALOG.find(c => {
+    if (c.id === clean.replace(/\s+/g, '_')) return true;
+    const catClean = c.name.replace(/\(.*?\)/g, '').replace(/[^a-zA-Z0-9\s]/g, ' ').toLowerCase().trim().replace(/\s+/g, ' ');
+    return catClean === clean;
+  });
+  if (directCat) return { id: directCat.id, name: directCat.name };
+
+  // 3. Đối soát gần đúng (token inclusion)
+  const partialCat = EXERCISE_CATALOG.find(c => {
+    const catClean = c.name.replace(/\(.*?\)/g, '').replace(/[^a-zA-Z0-9\s]/g, ' ').toLowerCase().trim().replace(/\s+/g, ' ');
+    return catClean.includes(clean) || clean.includes(catClean);
+  });
+  if (partialCat) return { id: partialCat.id, name: partialCat.name };
+
+  // 4. Nếu là bài tập riêng ngoài catalog
+  return {
+    id: 'custom_' + clean.replace(/\s+/g, '_'),
+    name: rawName.trim()
+  };
+}
+
+/**
+ * Tách dòng CSV có tính đến dấu nháy kép bọc chuỗi ("...")
+ */
+function parseCsvLine(line: string): string[] {
+  const result: string[] = [];
+  let current = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    if (char === '"') {
+      if (inQuotes && line[i + 1] === '"') {
+        current += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (char === ',' && !inQuotes) {
+      result.push(current.trim());
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+  result.push(current.trim());
+  return result;
+}
+
+export interface FitbodCsvParseResult {
   totalWorkouts: number;
   totalSets: number;
   totalVolumeKg: number;
-  records: Array<{ exercise: string; maxWeight: number; maxE1RM: number; bestSet: string }>;
-} {
-  const lines = csvText.split('\n').map(l => l.trim()).filter(Boolean);
-  if (lines.length < 2) return { totalWorkouts: 0, totalSets: 0, totalVolumeKg: 0, records: [] };
+  totalPRs: number;
+  records: Array<{
+    exerciseId: string;
+    exercise: string;
+    originalCsvName: string;
+    maxWeight: number;
+    maxE1RM: number;
+    bestReps: number;
+    bestSet: string;
+    lastDate: string;
+    totalSessions: number;
+    totalSets: number;
+  }>;
+  exerciseHistory: Record<string, ExerciseHistoryRecord>;
+}
 
-  const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+/**
+ * Trình phân tích chuỗi CSV Fitbod WorkoutExport.csv trực tiếp trên trình duyệt
+ * - Phân tích chính xác tên bài tập tiếng Anh sang Catalog bài tập hệ thống
+ * - Lưu lại chỉ số kỷ lục PR (Max Weight, 1RM, Best Reps)
+ * - Tự động tạo ExerciseHistory cho toàn bộ bài tập
+ */
+export function parseFitbodCsvText(csvText: string): FitbodCsvParseResult {
+  const lines = csvText.split('\n').map(l => l.trim()).filter(Boolean);
+  if (lines.length < 2) {
+    return {
+      totalWorkouts: 0,
+      totalSets: 0,
+      totalVolumeKg: 0,
+      totalPRs: 0,
+      records: [],
+      exerciseHistory: {}
+    };
+  }
+
+  const headers = parseCsvLine(lines[0]).map(h => h.replace(/^"|"$/g, ''));
   const weightColIndex = headers.findIndex(h => h.toLowerCase().includes('weight'));
   const repsColIndex = headers.findIndex(h => h.toLowerCase().includes('reps'));
   const exerciseColIndex = headers.findIndex(h => h.toLowerCase().includes('exercise'));
@@ -744,52 +1286,129 @@ export function parseFitbodCsvText(csvText: string): {
   const multiplierColIndex = headers.findIndex(h => h.toLowerCase().includes('multiplier'));
   const warmupColIndex = headers.findIndex(h => h.toLowerCase().includes('warmup'));
 
+  // Kiểm tra đơn vị là lbs hay kg
+  const isLbs = weightColIndex !== -1 && headers[weightColIndex].toLowerCase().includes('lbs');
+
   const workouts = new Set<string>();
-  const recordMap: Record<string, { maxWeight: number; maxE1RM: number; bestSet: string }> = {};
+  const recordMap: Record<string, {
+    exerciseId: string;
+    exercise: string;
+    originalCsvName: string;
+    maxWeight: number;
+    maxE1RM: number;
+    bestReps: number;
+    bestSet: string;
+    lastDate: string;
+    uniqueDates: Set<string>;
+    totalSets: number;
+  }> = {};
+
   let totalSets = 0;
   let totalVolumeKg = 0;
 
   for (let i = 1; i < lines.length; i++) {
-    const cols = lines[i].split(',').map(c => c.trim().replace(/^"|"$/g, ''));
+    const cols = parseCsvLine(lines[i]).map(c => c.replace(/^"|"$/g, ''));
     if (cols.length <= exerciseColIndex) continue;
 
     const dateStr = cols[dateColIndex] || '';
-    const exercise = cols[exerciseColIndex] || '';
-    if (!exercise || !dateStr) continue;
+    const rawExerciseName = cols[exerciseColIndex] || '';
+    if (!rawExerciseName || !dateStr) continue;
 
-    workouts.add(dateStr.substring(0, 10));
+    const dateKey = dateStr.substring(0, 10);
+    workouts.add(dateKey);
     totalSets++;
 
     const reps = parseInt(cols[repsColIndex] || '0', 10) || 0;
-    const weight = parseFloat(cols[weightColIndex] || '0') || 0;
+    const rawWeight = parseFloat(cols[weightColIndex] || '0') || 0;
     const multiplier = parseFloat(cols[multiplierColIndex] || '1.0') || 1.0;
     const isWarmup = (cols[warmupColIndex] || '').toLowerCase() === 'true';
 
-    if (!isWarmup && reps > 0 && weight > 0) {
-      const effectiveWeight = weight * multiplier;
-      totalVolumeKg += effectiveWeight * reps;
-      const e1rm = calculateE1RM(effectiveWeight, reps);
+    // Đổi lbs sang kg nếu cần
+    let kgWeight = isLbs ? rawWeight * 0.45359237 : rawWeight;
+    kgWeight = Math.round(kgWeight * 10) / 10;
 
-      if (!recordMap[exercise] || e1rm > recordMap[exercise].maxE1RM) {
-        recordMap[exercise] = {
-          maxWeight: Math.max(recordMap[exercise]?.maxWeight || 0, effectiveWeight),
-          maxE1RM: e1rm,
-          bestSet: `${reps} reps @ ${effectiveWeight}kg`
-        };
+    // Ánh xạ sang catalog bài tập
+    const mapped = mapFitbodExerciseToCatalog(rawExerciseName);
+    const key = mapped.id;
+
+    if (!recordMap[key]) {
+      recordMap[key] = {
+        exerciseId: mapped.id,
+        exercise: mapped.name,
+        originalCsvName: rawExerciseName,
+        maxWeight: 0,
+        maxE1RM: 0,
+        bestReps: 0,
+        bestSet: '',
+        lastDate: dateKey,
+        uniqueDates: new Set<string>(),
+        totalSets: 0
+      };
+    }
+
+    recordMap[key].uniqueDates.add(dateKey);
+    recordMap[key].totalSets++;
+    if (dateKey > recordMap[key].lastDate) {
+      recordMap[key].lastDate = dateKey;
+    }
+
+    if (!isWarmup && reps > 0 && kgWeight > 0) {
+      const effectiveTonnageWeight = kgWeight * multiplier;
+      totalVolumeKg += effectiveTonnageWeight * reps;
+
+      const e1rm = calculateE1RM(kgWeight, reps);
+
+      if (e1rm > recordMap[key].maxE1RM) {
+        recordMap[key].maxE1RM = e1rm;
+        recordMap[key].bestReps = reps;
+        recordMap[key].maxWeight = Math.max(recordMap[key].maxWeight, kgWeight);
+        recordMap[key].bestSet = `${reps} reps @ ${kgWeight}kg`;
+      } else if (kgWeight > recordMap[key].maxWeight) {
+        recordMap[key].maxWeight = kgWeight;
       }
     }
   }
 
-  const records = Object.entries(recordMap).map(([exercise, data]) => ({
-    exercise,
-    ...data
-  })).sort((a, b) => b.maxE1RM - a.maxE1RM);
+  // Chuyển recordMap sang danh sách PRs và ExerciseHistory
+  const exerciseHistory: Record<string, ExerciseHistoryRecord> = {};
+  const records: FitbodCsvParseResult['records'] = [];
+
+  Object.values(recordMap).forEach(r => {
+    if (r.maxE1RM > 0 || r.maxWeight > 0) {
+      records.push({
+        exerciseId: r.exerciseId,
+        exercise: r.exercise,
+        originalCsvName: r.originalCsvName,
+        maxWeight: r.maxWeight,
+        maxE1RM: r.maxE1RM,
+        bestReps: r.bestReps,
+        bestSet: r.bestSet || `${r.bestReps} reps @ ${r.maxWeight}kg`,
+        lastDate: r.lastDate,
+        totalSessions: r.uniqueDates.size,
+        totalSets: r.totalSets
+      });
+
+      exerciseHistory[r.exerciseId] = {
+        exerciseId: r.exerciseId,
+        totalSessions: r.uniqueDates.size,
+        lastSessionDate: r.lastDate,
+        sessionsSinceLastMaxEffort: 3,
+        bestWeight: r.maxWeight,
+        bestReps: r.bestReps,
+        e1RM: r.maxE1RM
+      };
+    }
+  });
+
+  records.sort((a, b) => b.maxE1RM - a.maxE1RM);
 
   return {
     totalWorkouts: workouts.size,
     totalSets,
     totalVolumeKg: Math.round(totalVolumeKg),
-    records
+    totalPRs: records.length,
+    records,
+    exerciseHistory
   };
 }
 

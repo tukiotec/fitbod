@@ -32,7 +32,7 @@ export const WorkoutQueueModal: React.FC<WorkoutQueueModalProps> = ({
       <div className="w-full max-w-lg bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden border border-slate-200 max-h-[85vh] flex flex-col animate-in slide-in-from-bottom duration-200">
         
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 bg-white shrink-0">
+        <div className="flex items-center justify-between px-5 pt-[max(16px,env(safe-area-inset-top))] pb-4 border-b border-slate-100 bg-white shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="p-2 bg-blue-50 text-blue-600 rounded-xl">
               <ListOrdered className="w-5 h-5" />
@@ -150,7 +150,7 @@ export const WorkoutQueueModal: React.FC<WorkoutQueueModalProps> = ({
         </div>
 
         {/* Bottom Close Button */}
-        <div className="p-4 border-t border-slate-100 bg-white shrink-0">
+        <div className="p-4 border-t border-slate-100 bg-white shrink-0 pb-[max(16px,env(safe-area-inset-bottom))]">
           <button
             onClick={onClose}
             className="w-full py-3.5 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-bold text-sm shadow-md active:scale-[0.99] transition"

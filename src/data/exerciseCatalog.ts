@@ -2050,7 +2050,7 @@ export const EXERCISE_CATALOG: (ExerciseItem & {
   {
     "id": "leg_press",
     "name": "Leg Press 45° (Máy đạp đùi)",
-    "tier": 2,
+    "tier": 1,
     "equipment": "machine",
     "movementPattern": "squat",
     "primaryMuscles": [
@@ -2527,9 +2527,9 @@ export const EXERCISE_CATALOG: (ExerciseItem & {
   {
     "id": "cable_woodchopper",
     "name": "Cable Woodchopper (Kéo cáp chéo chém củi)",
-    "tier": 3,
+    "tier": 4,
     "equipment": "cable",
-    "movementPattern": "isolation",
+    "movementPattern": "core",
     "primaryMuscles": [
       {
         "muscle": "abs",
@@ -2573,9 +2573,9 @@ export const EXERCISE_CATALOG: (ExerciseItem & {
   {
     "id": "cable_crunch",
     "name": "Kneeling Cable Crunch (Quỳ kéo cáp gập bụng)",
-    "tier": 3,
+    "tier": 4,
     "equipment": "cable",
-    "movementPattern": "isolation",
+    "movementPattern": "core",
     "primaryMuscles": [
       {
         "muscle": "abs",
@@ -2611,9 +2611,9 @@ export const EXERCISE_CATALOG: (ExerciseItem & {
   {
     "id": "hanging_leg_raise",
     "name": "Hanging Leg Raise (Treo xà nhấc chân)",
-    "tier": 2,
+    "tier": 4,
     "equipment": "bodyweight",
-    "movementPattern": "isolation",
+    "movementPattern": "core",
     "primaryMuscles": [
       {
         "muscle": "abs",
@@ -2652,9 +2652,9 @@ export const EXERCISE_CATALOG: (ExerciseItem & {
   {
     "id": "plank",
     "name": "Standard Plank (Giữ tư thế tấm ván)",
-    "tier": 3,
+    "tier": 4,
     "equipment": "bodyweight",
-    "movementPattern": "isolation",
+    "movementPattern": "core",
     "primaryMuscles": [
       {
         "muscle": "abs",

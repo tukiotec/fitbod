@@ -11,7 +11,7 @@ import {
   ChevronRight,
   ChevronDown,
   User,
-  Download
+  RotateCcw
 } from 'lucide-react';
 import { 
   MuscleGroup, 
@@ -35,8 +35,10 @@ import {
   calculateCompletedWorkoutFatigue,
   calculateE1RM,
   calculateTailoredWeight,
-  calculateExerciseRestSeconds
-, sanitizeWorkoutForSpineSafety } from './engine/fitbodEngine';
+  roundGymWeight,
+  calculateExerciseRestSeconds,
+  sanitizeWorkoutForSpineSafety
+} from './engine/fitbodEngine';
 import { ALL_MACHINE_IDS, getExcludedExerciseIds } from './data/gymMachines';
 
 import { WorkoutTab } from './components/WorkoutTab';
@@ -46,8 +48,6 @@ import { PlanTab } from './components/PlanTab';
 import { ActiveWorkoutModal } from './components/ActiveWorkoutModal';
 import { ProfileManagerModal } from './components/ProfileManagerModal';
 import { GymMachinesModal } from './components/GymMachinesModal';
-import { PwaInstallModal } from './components/PwaInstallModal';
-import { isStandalonePWA } from './utils/backgroundTimer';
 import { 
   getActiveProfile, 
   getProfileItem, 
@@ -58,8 +58,7 @@ import {
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'workout' | 'recovery' | 'history' | 'plan'>('workout');
   const [showProfileModal, setShowProfileModal] = useState<boolean>(false);
-  const [showPwaModal, setShowPwaModal] = useState<boolean>(false);
-  const isPWA = isStandalonePWA();
+  const [showResetConfirmModal, setShowResetConfirmModal] = useState<boolean>(false);
   const activeProfile = getActiveProfile();
 
   // Plan preferences
@@ -568,7 +567,7 @@ export const App: React.FC = () => {
         mistakes: replacement.mistakes,
         sets: exList[index].sets.map(s => ({
           ...s,
-          targetWeight: s.type === 'warmup' ? Math.round((defaultWeight * 0.5) / 2.5) * 2.5 : defaultWeight,
+          targetWeight: s.type === 'warmup' ? roundGymWeight(defaultWeight * 0.5, replacement.equipment, replacement.id) : defaultWeight,
           targetReps: s.targetReps || 10,
           cableRatio: replacement?.cableConfig?.pulleyRatio
         }))
@@ -665,7 +664,13 @@ export const App: React.FC = () => {
   };
 
   const handleImportSuccess = (parsedData: any) => {
-    // If user imports history, update some muscle recovery
+    if (parsedData?.exerciseHistory && Object.keys(parsedData.exerciseHistory).length > 0) {
+      setExerciseHistory(parsedData.exerciseHistory);
+      try {
+        setProfileItem('fitbod_exercise_history', JSON.stringify(parsedData.exerciseHistory));
+      } catch (e) {}
+    }
+    // Cập nhật mức độ hồi phục cơ bắp thông minh
     setRecoveryState(prev => ({
       ...prev,
       chest: 85,
@@ -674,13 +679,29 @@ export const App: React.FC = () => {
     }));
   };
 
+  const handleFactoryReset = () => {
+    try {
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && (k.startsWith('fitbod_') || k.includes('fitbod'))) {
+          keysToRemove.push(k);
+        }
+      }
+      keysToRemove.forEach(k => localStorage.removeItem(k));
+    } catch (e) {
+      console.error('Factory reset error:', e);
+    }
+    window.location.reload();
+  };
+
   return (
     <div className="min-h-screen bg-[#f1f5f9] flex justify-center selection:bg-blue-500 selection:text-white">
       {/* Mobile Frame Container */}
       <div className="w-full max-w-md bg-[#f8fafc] min-h-screen flex flex-col shadow-2xl relative border-x border-slate-200">
         
         {/* iOS Native Status Bar Header */}
-        <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md px-5 pt-3 pb-3 border-b border-slate-200/80 flex items-center justify-between shrink-0">
+        <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md px-5 pt-[max(12px,env(safe-area-inset-top))] pb-3 border-b border-slate-200/80 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-md shadow-blue-500/30">
               <Dumbbell className="w-4 h-4 stroke-[2.5]" />
@@ -696,18 +717,6 @@ export const App: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-1.5">
-            {/* PWA Home Screen Install Button */}
-            {!isPWA && (
-              <button
-                onClick={() => setShowPwaModal(true)}
-                className="flex items-center gap-1 px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-black rounded-full border border-blue-200/80 transition shadow-xs active:scale-95"
-                title="Cài đặt App vào Màn hình chính iPhone"
-              >
-                <Download className="w-3.5 h-3.5 text-blue-600" />
-                <span className="text-[11px]">Cài App</span>
-              </button>
-            )}
-
             {/* Multi-Profile Switcher */}
             <button
               onClick={() => setShowProfileModal(true)}
@@ -834,6 +843,7 @@ export const App: React.FC = () => {
               onChangeBodyProfile={handleChangeBodyProfile}
               spineSafeMode={bodyProfile.spineSafeMode ?? true}
               onToggleSpineSafeMode={handleToggleSpineSafeMode}
+              onFactoryReset={() => setShowResetConfirmModal(true)}
             />
           )}
         </main>
@@ -896,6 +906,7 @@ export const App: React.FC = () => {
         <ProfileManagerModal
           isOpen={showProfileModal}
           onClose={() => setShowProfileModal(false)}
+          onFactoryReset={() => setShowResetConfirmModal(true)}
         />
 
         {/* Gym Machines Modal */}
@@ -907,8 +918,39 @@ export const App: React.FC = () => {
           />
         )}
 
+        {/* Factory Reset Confirmation Modal */}
+        {showResetConfirmModal && (
+          <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-150">
+            <div className="w-full max-w-sm bg-white rounded-3xl p-6 text-center shadow-2xl border border-red-100 animate-in zoom-in-95 duration-150">
+              <div className="w-14 h-14 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-red-100 shadow-xs">
+                <RotateCcw className="w-7 h-7 stroke-[2.5]" />
+              </div>
+              <h3 className="text-lg font-black text-slate-900 mb-2">Khôi Phục Cài Đặt Gốc</h3>
+              <p className="text-xs text-slate-600 leading-relaxed mb-6 font-medium">
+                Sếp có chắc chắn muốn xóa toàn bộ dữ liệu lịch sử và cài đặt để bắt đầu lại từ đầu?
+              </p>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowResetConfirmModal(false)}
+                  className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl font-bold text-xs active:scale-95 transition"
+                >
+                  Hủy bỏ
+                </button>
+                <button
+                  type="button"
+                  onClick={handleFactoryReset}
+                  className="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white rounded-2xl font-black text-xs shadow-md shadow-red-500/20 active:scale-95 transition"
+                >
+                  Xác Nhận Xóa
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Bottom Navigation Bar */}
-        <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white/95 backdrop-blur-md border-t border-slate-200 py-2 px-3 flex items-center justify-around z-40">
+        <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white/95 backdrop-blur-md border-t border-slate-200 pt-2 pb-[max(12px,env(safe-area-inset-bottom))] px-3 flex items-center justify-around z-40">
           {[
             { id: 'workout', label: 'Hôm Nay', icon: Dumbbell },
             { id: 'recovery', label: 'Hồi Phục', icon: Activity },

@@ -14,8 +14,11 @@ import {
   TrendingUp, 
   ChevronRight,
   Info,
-  Check
-, Shield, AlertTriangle } from 'lucide-react';
+  Check,
+  Shield,
+  AlertTriangle,
+  RotateCcw
+} from 'lucide-react';
 import { 
   FitnessGoal, 
   FitnessSplit, 
@@ -49,6 +52,7 @@ interface PlanTabProps {
   onChangeBodyProfile: (profile: UserBodyProfile) => void;
   spineSafeMode?: boolean;
   onToggleSpineSafeMode?: (enabled: boolean) => void;
+  onFactoryReset?: () => void;
 }
 
 export const PlanTab: React.FC<PlanTabProps> = ({
@@ -72,7 +76,8 @@ export const PlanTab: React.FC<PlanTabProps> = ({
   bodyProfile,
   onChangeBodyProfile,
   spineSafeMode = true,
-  onToggleSpineSafeMode
+  onToggleSpineSafeMode,
+  onFactoryReset
 }) => {
   // Chuỗi nhập liệu tự do (Local String State) để gõ phím mượt mà trên iPhone/Safari
   const [weightStr, setWeightStr] = useState<string>(() => (bodyProfile.weightKg || 70).toString());
@@ -241,7 +246,7 @@ export const PlanTab: React.FC<PlanTabProps> = ({
   ];
 
   return (
-    <div className="space-y-4 pb-20">
+    <div className="space-y-4 pb-28">
       {/* 1. Body Profile & Strength Standard Section */}
       <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-sm space-y-4">
         <div className="flex items-center justify-between">
@@ -819,6 +824,20 @@ export const PlanTab: React.FC<PlanTabProps> = ({
         <Sparkles className="w-4 h-4" />
         Áp Dụng & Tạo Lại Buổi Tập Mới
       </button>
+
+      {/* Khôi Phục Cài Đặt Gốc */}
+      {onFactoryReset && (
+        <div className="pt-2">
+          <button
+            type="button"
+            onClick={onFactoryReset}
+            className="w-full py-3.5 px-4 bg-red-50 hover:bg-red-100 active:scale-[0.99] text-red-600 font-black text-xs rounded-2xl border border-red-200/80 shadow-xs flex items-center justify-center gap-2 transition"
+          >
+            <RotateCcw className="w-4 h-4 text-red-500" />
+            <span>Xóa Toàn Bộ Dữ Liệu & Làm Lại Từ Đầu</span>
+          </button>
+        </div>
+      )}
     </div>
   );
 };

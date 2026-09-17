@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
-import { UploadCloud, Trophy, Calendar, Dumbbell, ArrowUpRight, CheckCircle2, FileText, Download, ShieldCheck, Database, RefreshCw, HardDrive } from 'lucide-react';
-import { parseFitbodCsvText } from '../engine/fitbodEngine';
+import { UploadCloud, Trophy, Calendar, Dumbbell, ArrowUpRight, CheckCircle2, FileText, Download, ShieldCheck, Database, RefreshCw, HardDrive, Trash2, RotateCcw } from 'lucide-react';
+import { parseFitbodCsvText, FitbodCsvParseResult } from '../engine/fitbodEngine';
 import { getActiveProfile, getProfileItem, setProfileItem } from '../utils/profileStorage';
 
 interface HistoryTabProps {
@@ -12,12 +12,7 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({ onImportSuccess }) => {
   const jsonInputRef = useRef<HTMLInputElement>(null);
   const [importStatus, setImportStatus] = useState<string | null>(null);
   const activeProfile = getActiveProfile();
-  const [stats, setStats] = useState<{
-    totalWorkouts: number;
-    totalSets: number;
-    totalVolumeKg: number;
-    records: Array<{ exercise: string; maxWeight: number; maxE1RM: number; bestSet: string }>;
-  } | null>(() => {
+  const [stats, setStats] = useState<FitbodCsvParseResult | null>(() => {
     try {
       const saved = getProfileItem('fitbod_stats_cache');
       return saved ? JSON.parse(saved) : null;
@@ -37,11 +32,34 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({ onImportSuccess }) => {
         const parsed = parseFitbodCsvText(text);
         setStats(parsed);
         setProfileItem('fitbod_stats_cache', JSON.stringify(parsed));
-        setImportStatus(`Đã nạp thành công ${parsed.totalWorkouts} buổi tập và ${parsed.totalSets} sets từ Fitbod!`);
+        if (parsed.exerciseHistory && Object.keys(parsed.exerciseHistory).length > 0) {
+          setProfileItem('fitbod_exercise_history', JSON.stringify(parsed.exerciseHistory));
+        }
+        setImportStatus(`Đã nạp thành công ${parsed.totalWorkouts} buổi tập, ${parsed.totalSets} hiệp tập, ${parsed.records.length} kỷ lục cá nhân PR!`);
         onImportSuccess(parsed);
       }
     };
     reader.readAsText(file);
+    e.target.value = '';
+  };
+
+  const handleResetAndImportFresh = () => {
+    const confirmReset = window.confirm(
+      '⚠️ XÁC NHẬN XÓA TRẮNG & NẠP LẠI:\n\nSếp có chắc chắn muốn xóa sạch toàn bộ lịch sử rác cũ trong hồ sơ này và chọn file WorkoutExport.csv mới để nạp lại chuẩn xác 100% không?'
+    );
+    if (!confirmReset) return;
+
+    // 1. Xóa sạch lịch sử rác cũ
+    setProfileItem('fitbod_stats_cache', '');
+    setProfileItem('fitbod_exercise_history', '{}');
+    setStats(null);
+    setImportStatus('Đã xóa trắng lịch sử cũ. Sếp hãy chọn file WorkoutExport.csv mới để nạp!');
+
+    // 2. Mở file picker chọn file CSV ngay lập tức
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+      fileInputRef.current.click();
+    }
   };
 
   const handleJsonRestore = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -71,6 +89,7 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({ onImportSuccess }) => {
       }
     };
     reader.readAsText(file);
+    e.target.value = '';
   };
 
   const exportFullBackup = () => {
@@ -146,13 +165,49 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({ onImportSuccess }) => {
 `;
     const parsed = parseFitbodCsvText(sampleCsv);
     setStats(parsed);
-    setImportStatus(`Đã nạp mẫu thử nghiệm 3 buổi tập với các bài Squat, Bench, Deadlift!`);
+    setProfileItem('fitbod_stats_cache', JSON.stringify(parsed));
+    if (parsed.exerciseHistory && Object.keys(parsed.exerciseHistory).length > 0) {
+      setProfileItem('fitbod_exercise_history', JSON.stringify(parsed.exerciseHistory));
+    }
+    setImportStatus(`Đã nạp thành công ${parsed.totalWorkouts} buổi tập, ${parsed.totalSets} hiệp tập, ${parsed.records.length} kỷ lục cá nhân PR!`);
     onImportSuccess(parsed);
   };
 
   return (
     <div className="space-y-4 pb-20">
-      {/* Upload Box */}
+      {/* Nút Xóa Trắng & Import Lại File CSV Mới Nổi Bật Tại Đầu Tab */}
+      <div className="bg-white rounded-3xl p-5 border-2 border-red-200 shadow-sm relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-32 h-32 bg-red-50 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none" />
+        
+        <div className="flex items-center gap-3 mb-3 relative z-10">
+          <div className="p-3 bg-red-50 text-red-600 rounded-2xl border border-red-100">
+            <Trash2 className="w-5 h-5" />
+          </div>
+          <div>
+            <h2 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
+              <span>Xóa Trắng & Import Lại File CSV Mới</span>
+              <span className="px-2 py-0.5 text-[10px] font-black bg-red-100 text-red-700 rounded-full">RESET CHUẨN</span>
+            </h2>
+            <p className="text-xs text-slate-500 font-medium">
+              Xóa sạch lịch sử rác cũ & nạp lại chuẩn 100% từ <span className="font-bold text-slate-700">WorkoutExport.csv</span>
+            </p>
+          </div>
+        </div>
+
+        <button
+          onClick={handleResetAndImportFresh}
+          className="w-full py-3.5 px-4 bg-red-600 hover:bg-red-700 active:scale-[0.98] text-white rounded-2xl font-black text-sm flex items-center justify-center gap-2.5 transition shadow-lg shadow-red-600/25 relative z-10"
+        >
+          <RotateCcw className="w-4 h-4" />
+          <span>Bấm Để Xóa Trắng Cũ & Chọn File CSV Mới</span>
+        </button>
+
+        <p className="text-[11px] text-slate-400 mt-2 text-center relative z-10">
+          * Một chạm dọn sạch bộ nhớ cache và khôi phục PR, 1RM, lịch sử bài tập chuẩn xác nhất
+        </p>
+      </div>
+
+      {/* Upload Box Thường */}
       <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-sm">
         <div className="flex items-center gap-2.5 mb-3">
           <div className="p-2.5 bg-blue-50 text-blue-600 rounded-2xl">
@@ -252,7 +307,14 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({ onImportSuccess }) => {
                   </span>
                   <div>
                     <h4 className="text-xs font-bold text-slate-900">{r.exercise}</h4>
-                    <span className="text-[11px] text-slate-500 font-medium">Set đỉnh nhất: {r.bestSet}</span>
+                    <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                      <span className="text-[11px] text-slate-500 font-medium">Set đỉnh: {r.bestSet}</span>
+                      {r.maxWeight > 0 && (
+                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-md border border-emerald-200/60">
+                          Tạ Max: {r.maxWeight}kg
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
 
