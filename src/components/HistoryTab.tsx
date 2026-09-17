@@ -20,7 +20,7 @@ import {
   FileCode,
   Info
 } from 'lucide-react';
-import { parseFitbodCsvText, FitbodCsvParseResult } from '../engine/fitbodEngine';
+import { parseFitbodCsvText, FitbodCsvParseResult, FitbodRawLogEntry } from '../engine/fitbodEngine';
 import { getActiveProfile, getProfileItem, setProfileItem } from '../utils/profileStorage';
 
 interface HistoryTabProps {
@@ -82,6 +82,9 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({ onImportSuccess }) => {
           const parsed = parseFitbodCsvText(text);
           setStats(parsed);
           setProfileItem('fitbod_stats_cache', JSON.stringify(parsed));
+          if (parsed.rawLogs && parsed.rawLogs.length > 0) {
+            setProfileItem('fitbod_workout_log', JSON.stringify(parsed.rawLogs));
+          }
           if (parsed.exerciseHistory && Object.keys(parsed.exerciseHistory).length > 0) {
             setProfileItem('fitbod_exercise_history', JSON.stringify(parsed.exerciseHistory));
           }
@@ -106,6 +109,7 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({ onImportSuccess }) => {
     // 1. Xóa sạch lịch sử rác cũ
     setProfileItem('fitbod_stats_cache', '');
     setProfileItem('fitbod_exercise_history', '{}');
+    setProfileItem('fitbod_workout_log', '[]');
     setStats(null);
     setImportStatus('Đã xóa trắng lịch sử cũ. Sếp hãy chọn file .CSV hoặc .JSON mới để nạp!');
 
@@ -137,7 +141,8 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({ onImportSuccess }) => {
         fitbod_target_muscles: getProfileItem('fitbod_target_muscles'),
         fitbod_exercise_history: getProfileItem('fitbod_exercise_history'),
         fitbod_exercise_preferences: getProfileItem('fitbod_exercise_preferences'),
-        fitbod_stats_cache: getProfileItem('fitbod_stats_cache')
+        fitbod_stats_cache: getProfileItem('fitbod_stats_cache'),
+        fitbod_workout_log: getProfileItem('fitbod_workout_log')
       },
       stats
     };
@@ -154,13 +159,36 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({ onImportSuccess }) => {
 
   const exportFitbodCsv = () => {
     let csv = `Date,Exercise,Reps,Weight(kg),Duration(s),Distance(m),Incline,Resistance,isWarmup,Note,multiplier\n`;
-    const nowStr = new Date().toISOString().replace('T', ' ').slice(0, 19) + ' +0000';
     
-    if (stats && stats.records.length > 0) {
+    const rawLogsStr = getProfileItem('fitbod_workout_log');
+    let rawLogs: FitbodRawLogEntry[] = [];
+    if (rawLogsStr) {
+      try {
+        rawLogs = JSON.parse(rawLogsStr);
+      } catch (e) {}
+    }
+
+    if (rawLogs.length > 0) {
+      // Xuất trọn vẹn 100% từng hiệp tập với ngày tháng thật gốc của buổi tập
+      rawLogs.forEach(entry => {
+        const cleanExercise = entry.exercise.includes(',') ? `"${entry.exercise.replace(/"/g, '""')}"` : entry.exercise;
+        const cleanNote = entry.note ? (entry.note.includes(',') ? `"${entry.note.replace(/"/g, '""')}"` : entry.note) : '';
+        const dur = entry.durationSeconds ?? 0;
+        const dist = entry.distanceMeters ?? 0;
+        const inc = entry.incline ?? 0;
+        const res = entry.resistance ?? 0;
+        const isWarmup = entry.isWarmup ? 'true' : 'false';
+        const mult = entry.multiplier ?? 1.0;
+        csv += `${entry.date},${cleanExercise},${entry.reps},${entry.weightKg},${dur},${dist},${inc},${res},${isWarmup},${cleanNote},${mult}\n`;
+      });
+    } else if (stats && stats.records.length > 0) {
+      // Fallback: nếu hồ sơ cũ chưa có rawLogs, xuất từ danh sách records PR với ngày ghi nhận gần nhất (lastDate)
       stats.records.forEach(r => {
-        csv += `${nowStr},${r.exercise},10,${r.maxWeight},0,0,0,0,false,PR e1RM: ${r.maxE1RM}kg,1.0\n`;
+        const dateStr = r.lastDate ? `${r.lastDate} 10:00:00 +0000` : new Date().toISOString().replace('T', ' ').slice(0, 19) + ' +0000';
+        csv += `${dateStr},${r.exercise},10,${r.maxWeight},0,0,0,0,false,PR e1RM: ${r.maxE1RM}kg,1.0\n`;
       });
     } else {
+      const nowStr = new Date().toISOString().replace('T', ' ').slice(0, 19) + ' +0000';
       csv += `${nowStr},Barbell Bench Press,10,60.0,0,0,0,0,false,,1.0\n`;
     }
 
@@ -191,6 +219,9 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({ onImportSuccess }) => {
     const parsed = parseFitbodCsvText(sampleCsv);
     setStats(parsed);
     setProfileItem('fitbod_stats_cache', JSON.stringify(parsed));
+    if (parsed.rawLogs && parsed.rawLogs.length > 0) {
+      setProfileItem('fitbod_workout_log', JSON.stringify(parsed.rawLogs));
+    }
     if (parsed.exerciseHistory && Object.keys(parsed.exerciseHistory).length > 0) {
       setProfileItem('fitbod_exercise_history', JSON.stringify(parsed.exerciseHistory));
     }

@@ -38,7 +38,9 @@ import {
   calculateProgressiveOverloadWeight,
   roundGymWeight,
   calculateExerciseRestSeconds,
-  sanitizeWorkoutForSpineSafety
+  sanitizeWorkoutForSpineSafety,
+  FitbodRawLogEntry,
+  FitbodCsvParseResult
 } from './engine/fitbodEngine';
 import { ALL_MACHINE_IDS, getExcludedExerciseIds } from './data/gymMachines';
 
@@ -708,6 +710,120 @@ export const App: React.FC = () => {
         } catch (e) {}
         return nextHist;
       });
+
+      // Lưu 100% nhật ký các hiệp vừa hoàn thành hôm nay vào fitbod_workout_log & cập nhật fitbod_stats_cache
+      try {
+        const nowStr = new Date().toISOString().replace('T', ' ').slice(0, 19) + ' +0000';
+        const todayDateKey = nowStr.substring(0, 10);
+        const newLogs: FitbodRawLogEntry[] = [];
+
+        summary.exercises.forEach(ex => {
+          const completedSets = ex.sets.filter(s => s.isCompleted);
+          completedSets.forEach(s => {
+            const reps = s.loggedReps ?? s.targetReps ?? 0;
+            const weightKg = s.loggedWeight ?? s.targetWeight ?? 0;
+            const isWarmup = s.type === 'warmup';
+            newLogs.push({
+              date: nowStr,
+              exercise: ex.exerciseName,
+              reps,
+              weightKg,
+              durationSeconds: 0,
+              distanceMeters: 0,
+              incline: 0,
+              resistance: 0,
+              isWarmup,
+              note: isWarmup ? 'Khởi động' : (s.type === 'amrap' ? 'AMRAP Max Effort' : ''),
+              multiplier: 1.0
+            });
+          });
+        });
+
+        if (newLogs.length > 0) {
+          // 1. Tích lũy vào fitbod_workout_log
+          const existingLogsStr = getProfileItem('fitbod_workout_log');
+          let existingLogs: FitbodRawLogEntry[] = [];
+          if (existingLogsStr) {
+            try {
+              existingLogs = JSON.parse(existingLogsStr);
+            } catch (err) {}
+          }
+          const updatedLogs = [...existingLogs, ...newLogs];
+          setProfileItem('fitbod_workout_log', JSON.stringify(updatedLogs));
+
+          // 2. Tích lũy vào fitbod_stats_cache
+          const statsStr = getProfileItem('fitbod_stats_cache');
+          let currentStats: FitbodCsvParseResult | null = null;
+          if (statsStr) {
+            try {
+              currentStats = JSON.parse(statsStr);
+            } catch (err) {}
+          }
+
+          if (!currentStats) {
+            currentStats = {
+              totalWorkouts: 1,
+              totalSets: newLogs.length,
+              totalVolumeKg: Math.round(summary.totalVolume || 0),
+              totalPRs: 0,
+              records: [],
+              exerciseHistory: {}
+            };
+          } else {
+            currentStats.totalWorkouts = (currentStats.totalWorkouts || 0) + 1;
+            currentStats.totalSets = (currentStats.totalSets || 0) + newLogs.length;
+            currentStats.totalVolumeKg = Math.round((currentStats.totalVolumeKg || 0) + (summary.totalVolume || 0));
+          }
+
+          // Cập nhật hoặc chèn mới kỷ lục cá nhân PRs
+          summary.exercises.forEach(ex => {
+            const completedWorkingSets = ex.sets.filter(s => s.isCompleted && s.type !== 'warmup');
+            completedWorkingSets.forEach(s => {
+              const w = s.loggedWeight ?? s.targetWeight ?? 0;
+              const r = s.loggedReps ?? s.targetReps ?? 0;
+              if (w <= 0 || r <= 0) return;
+              const e1 = calculateE1RM(w, r);
+
+              let rec = currentStats!.records.find(
+                item => item.exerciseId === ex.exerciseId || item.exercise === ex.exerciseName
+              );
+
+              if (!rec) {
+                rec = {
+                  exerciseId: ex.exerciseId,
+                  exercise: ex.exerciseName,
+                  originalCsvName: ex.exerciseName,
+                  maxWeight: w,
+                  maxE1RM: e1,
+                  bestReps: r,
+                  bestSet: `${r} reps @ ${w}kg`,
+                  lastDate: todayDateKey,
+                  totalSessions: 1,
+                  totalSets: 1
+                };
+                currentStats!.records.push(rec);
+              } else {
+                rec.totalSets = (rec.totalSets || 0) + 1;
+                rec.lastDate = todayDateKey;
+                if (e1 > rec.maxE1RM) {
+                  rec.maxE1RM = e1;
+                  rec.bestReps = r;
+                  rec.maxWeight = Math.max(rec.maxWeight, w);
+                  rec.bestSet = `${r} reps @ ${w}kg`;
+                } else if (w > rec.maxWeight) {
+                  rec.maxWeight = w;
+                }
+              }
+            });
+          });
+
+          currentStats.totalPRs = currentStats.records.length;
+          currentStats.records.sort((a, b) => b.maxE1RM - a.maxE1RM);
+          setProfileItem('fitbod_stats_cache', JSON.stringify(currentStats));
+        }
+      } catch (logErr) {
+        console.error('Lỗi khi tích lũy fitbod_workout_log và stats:', logErr);
+      }
     }
   };
 

@@ -1527,6 +1527,20 @@ function parseCsvLine(line: string): string[] {
   return result;
 }
 
+export interface FitbodRawLogEntry {
+  date: string;              // "2024-03-01 10:00:00 +0000"
+  exercise: string;          // "Barbell Bench Press"
+  reps: number;
+  weightKg: number;
+  durationSeconds?: number;
+  distanceMeters?: number;
+  incline?: number;
+  resistance?: number;
+  isWarmup?: boolean;
+  note?: string;
+  multiplier?: number;
+}
+
 export interface FitbodCsvParseResult {
   totalWorkouts: number;
   totalSets: number;
@@ -1545,6 +1559,7 @@ export interface FitbodCsvParseResult {
     totalSets: number;
   }>;
   exerciseHistory: Record<string, ExerciseHistoryRecord>;
+  rawLogs?: FitbodRawLogEntry[];
 }
 
 /**
@@ -1552,6 +1567,7 @@ export interface FitbodCsvParseResult {
  * - Phân tích chính xác tên bài tập tiếng Anh sang Catalog bài tập hệ thống
  * - Lưu lại chỉ số kỷ lục PR (Max Weight, 1RM, Best Reps)
  * - Tự động tạo ExerciseHistory cho toàn bộ bài tập
+ * - Lưu trữ 100% nhật ký từng hiệp gốc (rawLogs) để khi export giữ nguyên ngày tháng thật
  */
 export function parseFitbodCsvText(csvText: string): FitbodCsvParseResult {
   const lines = csvText.split('\n').map(l => l.trim()).filter(Boolean);
@@ -1562,7 +1578,8 @@ export function parseFitbodCsvText(csvText: string): FitbodCsvParseResult {
       totalVolumeKg: 0,
       totalPRs: 0,
       records: [],
-      exerciseHistory: {}
+      exerciseHistory: {},
+      rawLogs: []
     };
   }
 
@@ -1573,6 +1590,11 @@ export function parseFitbodCsvText(csvText: string): FitbodCsvParseResult {
   const dateColIndex = headers.findIndex(h => h.toLowerCase().includes('date'));
   const multiplierColIndex = headers.findIndex(h => h.toLowerCase().includes('multiplier'));
   const warmupColIndex = headers.findIndex(h => h.toLowerCase().includes('warmup'));
+  const durationColIndex = headers.findIndex(h => h.toLowerCase().includes('duration'));
+  const distanceColIndex = headers.findIndex(h => h.toLowerCase().includes('distance'));
+  const inclineColIndex = headers.findIndex(h => h.toLowerCase().includes('incline'));
+  const resistanceColIndex = headers.findIndex(h => h.toLowerCase().includes('resistance'));
+  const noteColIndex = headers.findIndex(h => h.toLowerCase().includes('note'));
 
   // Kiểm tra đơn vị là lbs hay kg
   const isLbs = weightColIndex !== -1 && headers[weightColIndex].toLowerCase().includes('lbs');
@@ -1591,6 +1613,7 @@ export function parseFitbodCsvText(csvText: string): FitbodCsvParseResult {
     totalSets: number;
   }> = {};
 
+  const rawLogs: FitbodRawLogEntry[] = [];
   let totalSets = 0;
   let totalVolumeKg = 0;
 
@@ -1610,10 +1633,30 @@ export function parseFitbodCsvText(csvText: string): FitbodCsvParseResult {
     const rawWeight = parseFloat(cols[weightColIndex] || '0') || 0;
     const multiplier = parseFloat(cols[multiplierColIndex] || '1.0') || 1.0;
     const isWarmup = (cols[warmupColIndex] || '').toLowerCase() === 'true';
+    const durationSeconds = durationColIndex !== -1 ? (parseFloat(cols[durationColIndex] || '0') || 0) : 0;
+    const distanceMeters = distanceColIndex !== -1 ? (parseFloat(cols[distanceColIndex] || '0') || 0) : 0;
+    const incline = inclineColIndex !== -1 ? (parseFloat(cols[inclineColIndex] || '0') || 0) : 0;
+    const resistance = resistanceColIndex !== -1 ? (parseFloat(cols[resistanceColIndex] || '0') || 0) : 0;
+    const note = noteColIndex !== -1 ? (cols[noteColIndex] || '') : '';
 
     // Đổi lbs sang kg nếu cần
     let kgWeight = isLbs ? rawWeight * 0.45359237 : rawWeight;
     kgWeight = Math.round(kgWeight * 10) / 10;
+
+    // Lưu vào rawLogs giữ nguyên 100% dữ liệu gốc
+    rawLogs.push({
+      date: dateStr,
+      exercise: rawExerciseName,
+      reps,
+      weightKg: kgWeight,
+      durationSeconds,
+      distanceMeters,
+      incline,
+      resistance,
+      isWarmup,
+      note,
+      multiplier
+    });
 
     // Ánh xạ sang catalog bài tập
     const mapped = mapFitbodExerciseToCatalog(rawExerciseName);
@@ -1696,7 +1739,8 @@ export function parseFitbodCsvText(csvText: string): FitbodCsvParseResult {
     totalVolumeKg: Math.round(totalVolumeKg),
     totalPRs: records.length,
     records,
-    exerciseHistory
+    exerciseHistory,
+    rawLogs
   };
 }
 
