@@ -174,7 +174,14 @@ export interface ExerciseHistoryRecord {
   bestWeight?: number;
   bestReps?: number;
   e1RM?: number;
+  lastWeight?: number;
+  lastReps?: number;
+  lastTargetReps?: number;
+  lastCompletedAllReps?: boolean;
 }
+
+export type ExercisePreferenceType = 'favorite' | 'exclude' | 'neutral';
+export type ExercisePreferencesMap = Record<string, ExercisePreferenceType>;
 
 export interface UserProfile {
   id: string;

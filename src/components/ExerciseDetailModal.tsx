@@ -1,9 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Play, Image as ImageIcon, Video, AlertTriangle, CheckCircle, Dumbbell, Flame, Target, Sparkles, Film, ExternalLink } from 'lucide-react';
+import { X, Play, Image as ImageIcon, Video, AlertTriangle, CheckCircle, Dumbbell, Flame, Target, Sparkles, Film, ExternalLink, Star, Ban } from 'lucide-react';
 import { PlannedExercise } from '../types';
 import { AnatomyDiagram } from './AnatomyDiagram';
-import { EXERCISE_CATALOG } from '../data/exerciseCatalog';
+import { 
+  EXERCISE_CATALOG, 
+  getExercisePreferences, 
+  setExercisePreference, 
+  subscribeExercisePreferences, 
+  ExercisePreferenceStatus 
+} from '../data/exerciseCatalog';
 
 interface ExerciseDetailModalProps {
   exercise: PlannedExercise;
@@ -17,19 +23,49 @@ export const ExerciseDetailModal: React.FC<ExerciseDetailModalProps> = ({
   // Luôn nạp thông tin từ EXERCISE_CATALOG để bài tập từ session cũ vẫn có đầy đủ videoUrl chuẩn
   const catalogItem = EXERCISE_CATALOG.find(c => c.id === exercise.exerciseId);
   const activeVideoUrl = exercise.videoUrl || catalogItem?.videoUrl;
+  const activeVideoEmbedId = exercise.videoEmbedId || catalogItem?.videoEmbedId;
+  const activeVideoQuery = (catalogItem as any)?.videoQuery || `${exercise.exerciseName} form guide`;
   const activeImages = (exercise.images && exercise.images.length > 0) ? exercise.images : (catalogItem?.images || []);
   const activeMuscleTarget = exercise.muscleTarget || catalogItem?.muscleTarget;
   const activeSetup = exercise.setup || catalogItem?.setup;
   const activeExecution = exercise.execution || catalogItem?.execution;
   const activeMistakes = exercise.mistakes || catalogItem?.mistakes;
 
+  // Quản lý trạng thái Ưu tiên (Favorite ⭐) / Loại trừ (Exclude 🚫)
+  const [prefStatus, setPrefStatus] = useState<ExercisePreferenceStatus>(() => {
+    return getExercisePreferences()[exercise.exerciseId] || 'standard';
+  });
+
+  useEffect(() => {
+    return subscribeExercisePreferences(() => {
+      setPrefStatus(getExercisePreferences()[exercise.exerciseId] || 'standard');
+    });
+  }, [exercise.exerciseId]);
+
+  const handleToggleFavorite = () => {
+    const next: ExercisePreferenceStatus = prefStatus === 'favorite' ? 'standard' : 'favorite';
+    setExercisePreference(exercise.exerciseId, next);
+    setPrefStatus(next);
+  };
+
+  const handleToggleExclude = () => {
+    const next: ExercisePreferenceStatus = prefStatus === 'exclude' ? 'standard' : 'exclude';
+    setExercisePreference(exercise.exerciseId, next);
+    setPrefStatus(next);
+  };
+
   const hasLoopVideo = !!activeVideoUrl;
+  const hasYoutube = !!activeVideoEmbedId;
   const hasImages = activeImages.length > 0;
 
-  // Mặc định luôn ưu tiên mở Video Form 1080p
-  const [activeMediaTab, setActiveMediaTab] = useState<'loop' | 'anatomy' | 'animation'>(
-    hasLoopVideo ? 'loop' : (hasImages ? 'animation' : 'anatomy')
-  );
+  // Media Tab: 'loop' | 'youtube' | 'anatomy' | 'animation'
+  const [activeMediaTab, setActiveMediaTab] = useState<'loop' | 'youtube' | 'anatomy' | 'animation'>(() => {
+    if (hasLoopVideo) return 'loop';
+    if (hasYoutube) return 'youtube';
+    if (hasImages) return 'animation';
+    return 'anatomy';
+  });
+
   const [currentFrame, setCurrentFrame] = useState<number>(0);
   const [isVideoLoading, setIsVideoLoading] = useState<boolean>(true);
   const [videoError, setVideoError] = useState<boolean>(false);
@@ -57,29 +93,69 @@ export const ExerciseDetailModal: React.FC<ExerciseDetailModalProps> = ({
         
         {/* Top Sticky Header */}
         <div className="flex items-center justify-between px-5 pt-[max(16px,env(safe-area-inset-top))] pb-4 border-b border-slate-100 bg-white shrink-0">
-          <div>
-            <h3 className="font-extrabold text-slate-900 text-lg leading-tight">
-              {exercise.exerciseName}
-            </h3>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Tier {exercise.tier} • {exercise.equipment.toUpperCase()}
+          <div className="min-w-0 flex-1 pr-2">
+            <div className="flex items-center gap-2">
+              <h3 className="font-extrabold text-slate-900 text-lg leading-tight truncate">
+                {exercise.exerciseName}
+              </h3>
+            </div>
+            <div className="flex items-center gap-1.5 flex-wrap text-xs text-slate-500 mt-1">
+              <span>Tier {exercise.tier} • {exercise.equipment.toUpperCase()}</span>
               {activeMuscleTarget && (
-                <span className="ml-1.5 font-bold text-rose-600">• {activeMuscleTarget.primaryHeadNameVi}</span>
+                <span className="font-bold text-rose-600">• {activeMuscleTarget.primaryHeadNameVi}</span>
               )}
-            </p>
+              {prefStatus === 'favorite' && (
+                <span className="px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-800 text-[10px] font-black border border-amber-300">
+                  ⭐ Ưu tiên
+                </span>
+              )}
+              {prefStatus === 'exclude' && (
+                <span className="px-1.5 py-0.5 rounded-md bg-rose-100 text-rose-800 text-[10px] font-black border border-rose-300">
+                  🚫 Đã loại trừ
+                </span>
+              )}
+            </div>
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 active:scale-95"
-          >
-            <X className="w-5 h-5" />
-          </button>
+
+          {/* Action Buttons: Favorite ⭐, Exclude 🚫, Close X */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              onClick={handleToggleFavorite}
+              title={prefStatus === 'favorite' ? "Hủy ưu tiên bài này" : "Ưu tiên bài này trong các buổi tập (Favorite)"}
+              className={`p-2 rounded-xl text-xs font-bold border transition active:scale-95 ${
+                prefStatus === 'favorite'
+                  ? 'bg-amber-100 border-amber-300 text-amber-700 shadow-sm'
+                  : 'bg-slate-50 border-slate-200 text-slate-400 hover:text-amber-500 hover:bg-amber-50'
+              }`}
+            >
+              <Star className={`w-4 h-4 ${prefStatus === 'favorite' ? 'fill-amber-500 text-amber-500' : ''}`} />
+            </button>
+
+            <button
+              onClick={handleToggleExclude}
+              title={prefStatus === 'exclude' ? "Bỏ loại trừ (cho phép tập lại)" : "Loại trừ bài này khỏi lịch tập (Exclude)"}
+              className={`p-2 rounded-xl text-xs font-bold border transition active:scale-95 ${
+                prefStatus === 'exclude'
+                  ? 'bg-rose-100 border-rose-300 text-rose-700 shadow-sm'
+                  : 'bg-slate-50 border-slate-200 text-slate-400 hover:text-rose-500 hover:bg-rose-50'
+              }`}
+            >
+              <Ban className="w-4 h-4" />
+            </button>
+
+            <button
+              onClick={onClose}
+              className="p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 active:scale-95 ml-0.5"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto p-5 space-y-4">
           
-          {/* Media Player Box (Video Form vs Anatomy vs 2-Frame Images) */}
+          {/* Media Player Box (Loop Video vs YouTube HD vs Anatomy vs 2-Frame Images) */}
           <div className="bg-slate-950 rounded-3xl overflow-hidden shadow-inner border border-slate-800 relative">
             
             {/* Media Selector Pill */}
@@ -94,7 +170,20 @@ export const ExerciseDetailModal: React.FC<ExerciseDetailModalProps> = ({
                   }`}
                 >
                   <Film className="w-3.5 h-3.5 text-blue-300" />
-                  <span>Video Form</span>
+                  <span>Loop 1080p</span>
+                </button>
+              )}
+              {hasYoutube && (
+                <button
+                  onClick={() => setActiveMediaTab('youtube')}
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition ${
+                    activeMediaTab === 'youtube' 
+                      ? 'bg-red-600 text-white shadow-sm' 
+                      : 'text-slate-300 hover:text-white'
+                  }`}
+                >
+                  <Video className="w-3.5 h-3.5 text-red-300" />
+                  <span>YouTube Form</span>
                 </button>
               )}
               <button
@@ -106,7 +195,7 @@ export const ExerciseDetailModal: React.FC<ExerciseDetailModalProps> = ({
                 }`}
               >
                 <Target className="w-3.5 h-3.5" />
-                <span>Giải Phẫu Cơ</span>
+                <span>Giải Phẫu</span>
               </button>
               {hasImages && (
                 <button
@@ -127,7 +216,7 @@ export const ExerciseDetailModal: React.FC<ExerciseDetailModalProps> = ({
             {activeMediaTab === 'loop' && (
               <div className="absolute bottom-3 right-3 z-10 flex items-center gap-1 bg-black/70 backdrop-blur-md px-2.5 py-1 rounded-full text-[10px] font-extrabold text-blue-300 border border-blue-500/20 pointer-events-none">
                 <Sparkles className="w-3 h-3 text-blue-400" />
-                <span>Fitbod Loop 1080p • 0s Quảng Cáo</span>
+                <span>Fitbod Loop 1080p • Tự Lặp</span>
               </div>
             )}
 
@@ -139,7 +228,7 @@ export const ExerciseDetailModal: React.FC<ExerciseDetailModalProps> = ({
               </div>
             )}
 
-            {/* 1. Loop Video Tab Content (Fitbod Style: 1080p 60fps autoPlay loop, no talking, no ads) */}
+            {/* 1. Loop Video Tab Content (Fitbod Style: 1080p 60fps autoPlay loop) */}
             {activeMediaTab === 'loop' && hasLoopVideo && (
               <div className="w-full h-72 bg-slate-950 flex items-center justify-center relative overflow-hidden">
                 {isVideoLoading && !videoError && (
@@ -151,13 +240,22 @@ export const ExerciseDetailModal: React.FC<ExerciseDetailModalProps> = ({
                 {videoError ? (
                   <div className="text-center p-6 text-slate-400">
                     <Dumbbell className="w-12 h-12 mx-auto mb-2 text-slate-500" />
-                    <p className="text-xs text-slate-300 font-bold mb-1">Không thể tải luồng video trực tiếp</p>
-                    <button
-                      onClick={() => setActiveMediaTab('animation')}
-                      className="mt-2 px-3 py-1 bg-blue-600 text-white rounded-lg text-xs font-bold"
-                    >
-                      Chuyển sang xem ảnh kỹ thuật
-                    </button>
+                    <p className="text-xs text-slate-300 font-bold mb-2">Luồng MP4 trực tiếp gián đoạn</p>
+                    {hasYoutube ? (
+                      <button
+                        onClick={() => setActiveMediaTab('youtube')}
+                        className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition shadow"
+                      >
+                        Chuyển sang xem YouTube Form HD ↗
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => setActiveMediaTab('animation')}
+                        className="px-3 py-1 bg-blue-600 text-white rounded-lg text-xs font-bold"
+                      >
+                        Chuyển sang xem ảnh kỹ thuật
+                      </button>
+                    )}
                   </div>
                 ) : (
                   <video
@@ -174,20 +272,36 @@ export const ExerciseDetailModal: React.FC<ExerciseDetailModalProps> = ({
                     onError={() => {
                       setIsVideoLoading(false);
                       setVideoError(true);
+                      if (hasYoutube) {
+                        setActiveMediaTab('youtube');
+                      }
                     }}
                   />
                 )}
               </div>
             )}
 
-            {/* 2. Anatomy Tab Content */}
+            {/* 2. YouTube Form Embed Content */}
+            {activeMediaTab === 'youtube' && hasYoutube && (
+              <div className="w-full h-72 bg-black flex items-center justify-center relative overflow-hidden">
+                <iframe
+                  className="w-full h-full border-0"
+                  src={`https://www.youtube-nocookie.com/embed/${activeVideoEmbedId}?autoplay=1&mute=1&loop=1&playlist=${activeVideoEmbedId}&playsinline=1&controls=1&rel=0`}
+                  title={exercise.exerciseName}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              </div>
+            )}
+
+            {/* 3. Anatomy Tab Content */}
             {activeMediaTab === 'anatomy' && (
               <div className="w-full min-h-72 bg-white p-2">
                 <AnatomyDiagram muscleTarget={activeMuscleTarget} exerciseName={exercise.exerciseName} />
               </div>
             )}
 
-            {/* 3. 2-Phase Technical Images Content */}
+            {/* 4. 2-Phase Technical Images Content */}
             {activeMediaTab === 'animation' && (
               <div 
                 className="w-full h-72 bg-slate-900 flex items-center justify-center cursor-pointer relative"
@@ -293,13 +407,13 @@ export const ExerciseDetailModal: React.FC<ExerciseDetailModalProps> = ({
 
             {/* Safe external YouTube link */}
             <a
-              href={`https://www.youtube.com/results?search_query=${encodeURIComponent(exercise.exerciseName + ' form guide')}`}
+              href={`https://www.youtube.com/results?search_query=${encodeURIComponent(activeVideoQuery)}`}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center justify-center gap-2 w-full py-3 px-4 text-xs font-bold text-red-600 bg-red-50/80 hover:bg-red-100 rounded-2xl border border-red-200 transition active:scale-[0.99]"
             >
               <Video className="w-4 h-4 text-red-600 shrink-0" />
-              <span>Xem thêm phân tích kỹ thuật trên YouTube ↗</span>
+              <span>Xem phân tích chuyên sâu trên YouTube ↗</span>
             </a>
           </div>
 

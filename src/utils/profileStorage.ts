@@ -49,14 +49,17 @@ export const getScopedKey = (baseKey: string, profileId: string = getActiveProfi
 };
 
 export const getProfileItem = (baseKey: string): string | null => {
+  if (typeof window === 'undefined' || typeof localStorage === 'undefined') return null;
   return localStorage.getItem(getScopedKey(baseKey));
 };
 
 export const setProfileItem = (baseKey: string, value: string): void => {
+  if (typeof window === 'undefined' || typeof localStorage === 'undefined') return;
   localStorage.setItem(getScopedKey(baseKey), value);
 };
 
 export const removeProfileItem = (baseKey: string): void => {
+  if (typeof window === 'undefined' || typeof localStorage === 'undefined') return;
   localStorage.removeItem(getScopedKey(baseKey));
 };
 

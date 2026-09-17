@@ -16,6 +16,7 @@ import {
   Gender
 } from '../types';
 import { EXERCISE_CATALOG, MUSCLES_INFO } from '../data/exerciseCatalog';
+import { getExercisePreferences, ExercisePreferenceStatus } from '../utils/exercisePreferences';
 
 /**
  * Hàm làm tròn mức tạ theo bước tạ gym thực tế chuẩn quốc tế:
@@ -203,6 +204,81 @@ export function calculateTailoredWeight(
   return 20;
 }
 
+/**
+ * Thuật toán Progressive Overload & Smart Weight Trajectory:
+ * Dựa trên lịch sử tập luyện của bài tập đó từ exerciseHistory:
+ * - Nếu buổi trước Sếp đã hoàn thành đủ số reps với mức tạ W: Buổi hôm nay TỰ ĐỘNG ĐÀ LÊN TẠ:
+ *   + Tạ đòn: Tăng +2.5kg
+ *   + Tạ đơn: Tăng +2kg (mỗi bên)
+ *   + Máy/Cáp: Cáp tăng +2.5kg, Máy khối tăng +5kg (Leg Press đạp đùi tăng +10kg)
+ * - Nếu buổi trước bị hụt rep: Giữ nguyên tạ hoặc giảm nhẹ 1 rep mục tiêu để tích lũy thể lực
+ * - Nếu chưa có lịch sử: Tính mức tạ khởi điểm chuẩn hóa theo % Bodyweight & Trình độ
+ */
+export function calculateProgressiveOverloadWeight(
+  exercise: ExerciseItem,
+  history?: ExerciseHistoryRecord,
+  profile?: UserBodyProfile,
+  goal: FitnessGoal = 'hypertrophy'
+): { 
+  targetWeight: number; 
+  isProgressive: boolean; 
+  targetRepsAdjustment: number;
+  reasonVi: string;
+} {
+  if (!exercise) {
+    return { targetWeight: 0, isProgressive: false, targetRepsAdjustment: 0, reasonVi: 'N/A' };
+  }
+  if (exercise.equipment === 'bodyweight') {
+    return { targetWeight: 0, isProgressive: false, targetRepsAdjustment: 0, reasonVi: 'Bodyweight' };
+  }
+
+  const defaultWeight = calculateTailoredWeight(exercise, profile, goal);
+
+  if (!history || !history.lastWeight || history.lastWeight <= 0) {
+    return { 
+      targetWeight: defaultWeight, 
+      isProgressive: false, 
+      targetRepsAdjustment: 0, 
+      reasonVi: 'Khởi điểm cá nhân hóa theo thể trọng' 
+    };
+  }
+
+  // Xác định xem buổi trước đã hoàn thành đủ reps mục tiêu chưa
+  const didCompleteAll = history.lastCompletedAllReps !== false &&
+    (!history.lastTargetReps || (history.lastReps || 0) >= history.lastTargetReps);
+
+  if (didCompleteAll) {
+    // TỰ ĐỘNG ĐÀ LÊN TẠ (Progressive Overload)
+    let increment = 2.5;
+    if (exercise.equipment === 'barbell') {
+      increment = 2.5;
+    } else if (exercise.equipment === 'dumbbell') {
+      increment = 2.0;
+    } else if (exercise.equipment === 'cable') {
+      increment = 2.5;
+    } else if (exercise.equipment === 'machine') {
+      increment = exercise.id.includes('leg_press') ? 10 : 5;
+    }
+
+    const newWeight = roundGymWeight(history.lastWeight + increment, exercise.equipment, exercise.id);
+    return {
+      targetWeight: newWeight,
+      isProgressive: true,
+      targetRepsAdjustment: 0,
+      reasonVi: `Đà lên tạ (+${increment}kg) do buổi trước đạt mục tiêu ${history.lastReps ?? ''} reps @ ${history.lastWeight}kg`
+    };
+  } else {
+    // Buổi trước bị hụt rep: Giữ nguyên tạ, củng cố form
+    const sameWeight = roundGymWeight(history.lastWeight, exercise.equipment, exercise.id);
+    return {
+      targetWeight: sameWeight,
+      isProgressive: false,
+      targetRepsAdjustment: -1,
+      reasonVi: `Giữ nguyên tạ ${history.lastWeight}kg củng cố form do buổi trước chưa đạt đủ reps`
+    };
+  }
+}
+
 export interface StrengthStandardItem {
   id: string;
   name: string;
@@ -324,8 +400,14 @@ export function calculateDynamicRecovery(
 
 /**
  * Tính toán mức mỏi cơ thực tế dựa trên các hiệp THỰC SỰ ĐÃ HOÀN THÀNH (isCompleted = true)
- * Chuẩn thuật toán Fitbod: Mỗi working set hoàn thành làm giảm 3% - 6% độ hồi phục tùy theo
- * cường độ tạ (% 1RM), số rep, Tier bài tập và tỷ lệ nhóm cơ chính/phụ.
+ * Chuẩn hóa theo thuật toán Fitbod AI:
+ * - Với mỗi working set hoàn thành của nhóm cơ chính (primary muscle):
+ *   Độ mỏi đóng góp là 6.5% - 9.5% tùy theo cường độ tải (RIR và trọng lượng tạ / % 1RM).
+ * - Nếu là hiệp AMRAP / Max Effort: Tăng thêm +4% - 6% (+5%) độ mỏi do kích hoạt 100% sợi cơ ngắt.
+ * - Hiệp Warmup (khởi động): Đóng góp nhẹ 1.5% - 2.5% độ mỏi làm nóng khớp.
+ * - Đối với nhóm cơ phụ (secondary muscle): Nhận 35% - 50% độ mỏi của nhóm cơ chính.
+ * -> Kết quả: Một buổi tập 45-60 phút gồm 3-4 bài tập (10-15 working sets) tập trung vào Lưng xô & Tay trước
+ * thì độ mỏi tích lũy (Cumulative Fatigue) ĐẠT 70% - 85% (mức Recovery State tụt về vùng 15% - 30% màu cam/đỏ chuẩn Fitbod).
  */
 export function calculateCompletedWorkoutFatigue(
   currentRecovery: Record<MuscleGroup, number>,
@@ -335,8 +417,6 @@ export function calculateCompletedWorkoutFatigue(
   const fatigue: Record<MuscleGroup, number> = {} as any;
   (Object.keys(MUSCLES_INFO) as MuscleGroup[]).forEach(m => { fatigue[m] = 0; });
 
-  let hasAnyCompletedSet = false;
-
   exercises.forEach(ex => {
     const catalogItem = EXERCISE_CATALOG.find(c => c.id === ex.exerciseId);
     if (!catalogItem) return;
@@ -345,27 +425,57 @@ export function calculateCompletedWorkoutFatigue(
     const completedSets = ex.sets.filter(s => s.isCompleted);
     if (completedSets.length === 0) return;
 
-    hasAnyCompletedSet = true;
-
-    // Hệ số tải thần kinh theo Tier (Tier 1 Compound nặng hơn Tier 3 Isolation)
-    const tierMultiplier = catalogItem.tier === 1 ? 1.0 : (catalogItem.tier === 2 ? 0.85 : 0.7);
-
     completedSets.forEach(set => {
-      const weight = set.loggedWeight ?? set.targetWeight;
-      const reps = set.loggedReps ?? set.targetReps;
+      const isWarmup = set.type === 'warmup';
+      const isAmrap = set.type === 'amrap' || (ex.isMaxEffort && set.setIndex === ex.sets.length);
+      const weight = set.loggedWeight ?? set.targetWeight ?? 0;
+      const reps = set.loggedReps ?? set.targetReps ?? 10;
       const e1rm = calculateE1RM(weight, reps);
-      const intensity = (e1rm > 0 && weight > 0) ? Math.min(1.0, weight / e1rm) : 0.7;
 
-      // Mỗi hiệp chuẩn đóng góp 3.0% - 5.5% độ mỏi
-      const baseSetFatigue = Math.min(5.5, Math.max(2.5, reps * intensity * tierMultiplier * 0.65));
+      // 1. Cường độ tải (Intensity Score: 0.0 -> 1.0)
+      const loadRatio = (e1rm > 0 && weight > 0) ? Math.min(1.0, Math.max(0.6, weight / e1rm)) : 0.75;
+      
+      // RIR factor: RIR 0 -> 1.0, RIR 1 -> 0.9, RIR 2 -> 0.8, RIR 3 -> 0.7
+      let rirFactor = 0.8;
+      if (set.rir !== undefined) {
+        rirFactor = Math.min(1.0, Math.max(0.6, 1.0 - (set.rir * 0.1)));
+      } else if (isAmrap) {
+        rirFactor = 1.0;
+      }
 
+      const rawIntensity = (loadRatio * 0.6) + (rirFactor * 0.4);
+      const intensity = Math.min(1.0, Math.max(0.0, (rawIntensity - 0.6) / 0.4));
+
+      // 2. Độ mỏi cơ sở cho nhóm cơ chính (Base Primary Fatigue)
+      let basePrimaryFatigue: number;
+      if (isWarmup) {
+        basePrimaryFatigue = 1.5 + (intensity * 1.5); // 1.5% -> 3.0%
+      } else {
+        basePrimaryFatigue = 7.5 + (intensity * 3.0); // 7.5% -> 10.5%
+        if (isAmrap) {
+          basePrimaryFatigue += 5.5; // AMRAP / Max Effort tăng thêm +5.5%
+        }
+      }
+
+      // 3. Phân bổ cho nhóm cơ chính (Primary Muscles):
+      // Nhóm cơ chính chủ lực của bài luôn nhận trọn vẹn 7.5% - 10.5%
+      const maxPmRatio = Math.max(...catalogItem.primaryMuscles.map(p => p.ratio), 1.0);
       catalogItem.primaryMuscles.forEach(pm => {
-        fatigue[pm.muscle] = (fatigue[pm.muscle] || 0) + baseSetFatigue * pm.ratio;
+        const muscleWeight = maxPmRatio > 0 ? Math.max(0.90, pm.ratio / maxPmRatio) : 1.0;
+        fatigue[pm.muscle] = (fatigue[pm.muscle] || 0) + (basePrimaryFatigue * muscleWeight);
       });
 
-      catalogItem.secondaryMuscles.forEach(sm => {
-        fatigue[sm.muscle] = (fatigue[sm.muscle] || 0) + baseSetFatigue * sm.ratio * 0.35;
-      });
+      // 4. Phân bổ cho nhóm cơ phụ (Secondary Muscles):
+      // Nhận 50% - 70% độ mỏi của nhóm cơ chính trong các động tác Compound kéo/đẩy
+      if (catalogItem.secondaryMuscles && catalogItem.secondaryMuscles.length > 0) {
+        const maxSmRatio = Math.max(...catalogItem.secondaryMuscles.map(s => s.ratio), 1.0);
+        catalogItem.secondaryMuscles.forEach(sm => {
+          const smRelativeRatio = maxSmRatio > 0 ? (sm.ratio / maxSmRatio) : 1.0;
+          const secondaryFactor = 0.50 + (0.20 * smRelativeRatio); // 50% -> 70%
+          const smFatigue = basePrimaryFatigue * secondaryFactor;
+          fatigue[sm.muscle] = (fatigue[sm.muscle] || 0) + smFatigue;
+        });
+      }
     });
   });
 
@@ -377,6 +487,7 @@ export function calculateCompletedWorkoutFatigue(
 
   return updated;
 }
+
 
 /**
  * Thuật toán tạo buổi tập thông minh chuẩn Fitbod AI:
@@ -486,32 +597,38 @@ export function getExerciseAngleDiversityKey(ex: ExerciseItem): string {
 
   // 1. CHEST (Ngực)
   if (primaryMuscle === 'chest') {
-    if (id === 'incline_barbell_bench_press' || id === 'incline_dumbbell_press' || id === 'incline_chest_press_machine') {
+    if (id === 'incline_barbell_bench_press' || id === 'incline_dumbbell_press' || id === 'incline_chest_press_machine' || id === 'machine_incline_chest_press') {
       return 'chest_incline_press';
     }
-    if (id === 'decline_dumbbell_press' || id === 'chest_dip') {
+    if (id === 'dumbbell_incline_fly' || id === 'cable_low_to_high_fly') {
+      return 'chest_incline_fly';
+    }
+    if (id === 'decline_dumbbell_press' || id === 'chest_dip' || id === 'weighted_chest_dip' || id === 'decline_barbell_bench_press') {
       return 'chest_decline_dips';
     }
-    if (id === 'cable_chest_fly' || id === 'incline_cable_fly' || id === 'decline_cable_fly' || id === 'pec_deck_machine') {
+    if (id === 'cable_chest_fly' || id === 'incline_cable_fly' || id === 'decline_cable_fly' || id === 'pec_deck_machine' || id === 'cable_middle_fly' || id === 'dumbbell_pullover') {
       return 'chest_fly';
     }
-    if (id === 'barbell_bench_press' || id === 'dumbbell_bench_press' || id === 'chest_press_machine' || id === 'push_up') {
+    if (id === 'barbell_bench_press' || id === 'dumbbell_bench_press' || id === 'chest_press_machine' || id === 'push_up' || id === 'smith_machine_bench_press') {
       return 'chest_flat_press';
     }
   }
 
   // 2. SHOULDERS (Vai & Cầu vai)
   if (primaryMuscle === 'shoulders' || primaryMuscle === 'traps') {
-    if (id === 'overhead_press' || id === 'dumbbell_shoulder_press' || id === 'arnold_press') {
+    if (id === 'overhead_press' || id === 'dumbbell_shoulder_press' || id === 'arnold_press' || id === 'machine_shoulder_press' || id === 'standing_arnold_press' || id === 'smith_machine_overhead_press') {
       return 'shoulder_overhead_press';
     }
-    if (id === 'dumbbell_lateral_raise' || id === 'cable_lateral_raise') {
+    if (id === 'dumbbell_lateral_raise' || id === 'cable_lateral_raise' || id === 'cable_single_arm_lateral_raise' || id === 'barbell_upright_row') {
       return 'shoulder_lateral_raise';
     }
-    if (id === 'face_pull' || id === 'dumbbell_rear_delt_fly' || id === 'reverse_pec_deck') {
+    if (id === 'dumbbell_front_raise') {
+      return 'shoulder_front_raise';
+    }
+    if (id === 'face_pull' || id === 'dumbbell_rear_delt_fly' || id === 'reverse_pec_deck' || id === 'cable_face_pull_high' || id === 'incline_rear_delt_fly') {
       return 'shoulder_rear_delt';
     }
-    if (id === 'barbell_shrug') {
+    if (id === 'barbell_shrug' || id === 'dumbbell_shrug') {
       return 'shoulder_shrug';
     }
   }
@@ -519,64 +636,67 @@ export function getExerciseAngleDiversityKey(ex: ExerciseItem): string {
   // 3. BACK (Lưng xô & Lưng dưới)
   if (primaryMuscle === 'lats' || primaryMuscle === 'upper_back' || primaryMuscle === 'lower_back') {
     if (id === 'deadlift') return 'back_deadlift';
-    if (id === 'back_extension') return 'back_hyperextension';
-    if (id === 'straight_arm_pulldown') return 'back_straight_arm';
+    if (id === 'back_extension' || id === 'bird_dog') return 'back_hyperextension';
+    if (id === 'straight_arm_pulldown' || id === 'rope_straight_arm_pulldown') return 'back_straight_arm';
     if (id === 'pull_up') return 'back_pull_up';
-    if (id === 'lat_pulldown') return 'back_lat_pulldown';
+    if (id === 'lat_pulldown' || id === 'neutral_grip_lat_pulldown' || id === 'single_arm_lat_pulldown') return 'back_lat_pulldown';
     if (id === 'chin_up') return 'back_chin_up';
     if (id === 'close_grip_lat_pulldown') return 'back_close_lat_pulldown';
-    if (id === 'barbell_row') return 'back_barbell_row';
+    if (id === 'barbell_row' || id === 'landmine_row' || id === 'incline_dumbbell_row') return 'back_barbell_row';
     if (id === 'tbar_row') return 'back_tbar_row';
     if (id === 'dumbbell_row') return 'back_dumbbell_row';
-    if (id === 'seated_cable_row') return 'back_seated_cable_row';
+    if (id === 'seated_cable_row' || id === 'cable_seated_high_row' || id === 'wide_grip_seated_row') return 'back_seated_cable_row';
   }
 
   // 4. BICEPS (Tay trước & Cẳng tay)
   if (primaryMuscle === 'biceps' || primaryMuscle === 'forearms') {
     if (id === 'barbell_curl' || id === 'cable_bicep_curl') return 'biceps_regular_curl';
-    if (id === 'dumbbell_hammer_curl') return 'biceps_hammer_curl';
+    if (id === 'dumbbell_hammer_curl' || id === 'incline_dumbbell_hammer_curl' || id === 'cable_rope_hammer_curl') return 'biceps_hammer_curl';
     if (id === 'dumbbell_incline_curl') return 'biceps_incline_curl';
-    if (id === 'ez_bar_preacher_curl') return 'biceps_preacher_curl';
+    if (id === 'ez_bar_preacher_curl' || id === 'spider_curl' || id === 'dumbbell_concentration_curl' || id === 'dumbbell_preacher_curl') return 'biceps_preacher_curl';
+    if (id === 'reverse_barbell_curl' || id === 'barbell_wrist_curl') return 'forearms_grip';
   }
 
   // 5. TRICEPS (Tay sau)
   if (primaryMuscle === 'triceps') {
-    if (id === 'tricep_rope_pushdown' || id === 'cable_straight_bar_pushdown') return 'triceps_pushdown';
+    if (id === 'tricep_rope_pushdown' || id === 'cable_straight_bar_pushdown' || id === 'cable_single_arm_tricep_extension' || id === 'cable_reverse_pushdown') return 'triceps_pushdown';
     if (id === 'overhead_cable_tricep_extension' || id === 'dumbbell_seated_tricep_extension') return 'triceps_overhead';
-    if (id === 'skull_crushers' || id === 'close_grip_bench_press' || id === 'dumbbell_tricep_kickback') return 'triceps_extension_press';
+    if (id === 'skull_crushers' || id === 'close_grip_bench_press' || id === 'dumbbell_tricep_kickback' || id === 'tate_press' || id === 'smith_close_grip_bench_press' || id === 'diamond_push_up' || id === 'tricep_dip') return 'triceps_extension_press';
   }
 
   // 6. QUADS (Đùi trước)
   if (primaryMuscle === 'quads') {
-    if (id === 'barbell_squat' || id === 'barbell_front_squat') return 'quads_heavy_squat';
-    if (id === 'leg_press') return 'quads_leg_press';
-    if (id === 'bulgarian_split_squat' || id === 'goblet_squat') return 'quads_unilateral_squat';
+    if (id === 'barbell_squat' || id === 'barbell_front_squat' || id === 'smith_machine_squat' || id === 'hack_squat_machine') return 'quads_heavy_squat';
+    if (id === 'leg_press' || id === 'sumo_leg_press') return 'quads_leg_press';
+    if (id === 'bulgarian_split_squat' || id === 'goblet_squat' || id === 'barbell_step_ups' || id === 'dumbbell_walking_lunges') return 'quads_unilateral_squat';
     if (id === 'leg_extension') return 'quads_isolation';
   }
 
   // 7. HAMSTRINGS (Đùi sau)
   if (primaryMuscle === 'hamstrings') {
-    if (id === 'romanian_deadlift' || id === 'dumbbell_rdl') return 'hamstrings_rdl';
+    if (id === 'romanian_deadlift' || id === 'dumbbell_rdl' || id === 'dumbbell_stiff_leg_deadlift') return 'hamstrings_rdl';
     if (id === 'lying_leg_curl' || id === 'seated_leg_curl') return 'hamstrings_curl';
+    if (id === 'hip_adduction_machine') return 'hamstrings_adduction';
   }
 
   // 8. GLUTES (Mông)
   if (primaryMuscle === 'glutes') {
-    if (id === 'barbell_hip_thrust') return 'glutes_thrust';
+    if (id === 'barbell_hip_thrust' || id === 'cable_pull_through') return 'glutes_thrust';
     if (id === 'cable_glute_kickback') return 'glutes_kickback';
+    if (id === 'hip_abduction_machine') return 'glutes_abduction';
   }
 
   // 9. CALVES (Bắp chân)
   if (primaryMuscle === 'calves') {
-    if (id === 'standing_calf_raise') return 'calves_standing';
+    if (id === 'standing_calf_raise' || id === 'donkey_calf_raise') return 'calves_standing';
     if (id === 'seated_calf_raise') return 'calves_seated';
   }
 
   // 10. ABS / CORE (Cơ bụng)
   if (primaryMuscle === 'abs') {
-    if (id === 'cable_crunch' || id === 'hanging_leg_raise') return 'abs_flexion';
-    if (id === 'plank') return 'abs_isometric';
-    if (id === 'cable_woodchopper') return 'abs_rotational';
+    if (id === 'cable_crunch' || id === 'hanging_leg_raise' || id === 'hanging_knee_raise') return 'abs_flexion';
+    if (id === 'plank' || id === 'ab_wheel_rollout' || id === 'deadbug') return 'abs_isometric';
+    if (id === 'cable_woodchopper' || id === 'russian_twist' || id === 'cable_side_bend') return 'abs_rotational';
   }
 
   return `${primaryMuscle}_${ex.movementPattern}_${id}`;
@@ -596,8 +716,12 @@ export function generateSmartWorkout(
   equipmentPreference: EquipmentPreference = 'all',
   excludedExerciseIds?: string[],
   forceMaxEffortExerciseId?: string,
-  bodyProfile?: UserBodyProfile
+  bodyProfile?: UserBodyProfile,
+  exercisePreferences?: Record<string, ExercisePreferenceStatus>
 ): WorkoutPlan {
+  // Đọc danh sách ưu tiên/loại trừ (từ param hoặc storage)
+  const effectivePreferences = exercisePreferences || getExercisePreferences();
+
   // 1. Phân định nhóm cơ theo Split hoặc Target Muscles tùy chọn
   const splitMapping: Record<FitnessSplit, MuscleGroup[]> = {
     push_pull_legs: ['chest', 'shoulders', 'triceps'],
@@ -623,7 +747,7 @@ export function generateSmartWorkout(
     }
   }
 
-  // 2. Lọc các bài tập thỏa mãn thiết bị và nhóm cơ (loại bỏ bài tập máy phòng gym không có hoặc bài hại cột sống)
+  // 2. Lọc các bài tập thỏa mãn thiết bị và nhóm cơ (loại bỏ bài tập máy phòng gym không có, bài hại cột sống, hoặc bài Sếp đã chặn)
   const effectiveExcluded = new Set<string>(excludedExerciseIds || []);
   if (bodyProfile?.spineSafeMode) {
     HERNIATED_DISC_EXCLUDED_IDS.forEach(id => effectiveExcluded.add(id));
@@ -632,16 +756,22 @@ export function generateSmartWorkout(
   const eligible = EXERCISE_CATALOG.filter((ex) => {
     if (ex.movementPattern === 'cardio') return false;
     if (effectiveExcluded.has(ex.id)) return false;
+    // BÀI CÓ TRẠNG THÁI 'exclude' (Loại trừ 🚫): BỊ LOẠI BỎ 100%
+    if (effectivePreferences[ex.id] === 'exclude') return false;
     const equipOk = ex.equipment === 'bodyweight' || availableEquipment.includes(ex.equipment);
     if (!equipOk) return false;
     return ex.primaryMuscles.some((pm) => candidateMuscles.includes(pm.muscle));
   });
 
   // Tính điểm ưu tiên cho từng bài tập:
+  // - Bài Yêu thích ⭐: +150 điểm để AI luôn ưu tiên chọn khi nhóm cơ hồi phục
   // - Ưu tiên thiết bị nếu Sếp chọn: +60 điểm
   // - Ưu tiên Compound/Tier chuẩn khoa học: (5 - tier) * 10
   const getExerciseScore = (ex: ExerciseItem): number => {
     let score = 0;
+    if (effectivePreferences[ex.id] === 'favorite') {
+      score += 150;
+    }
     if (equipmentPreference !== 'all') {
       if (ex.equipment === equipmentPreference) {
         score += 60;
@@ -799,12 +929,17 @@ export function generateSmartWorkout(
   const plannedExercises: PlannedExercise[] = selected.map((ex, exIdx) => {
     const isExerciseMaxEffort = exIdx === maxEffortIdx;
 
-    // Tính toán mức tạ khoa học cá nhân hóa theo % Bodyweight & Trình độ (Beginner/Advanced/Expert)
-    const targetWeight = calculateTailoredWeight(ex, bodyProfile, goal);
+    // 1. Tính toán mức tạ đỉnh (Peak Weight) theo Progressive Overload từ Exercise History
+    const { targetWeight: peakWeight, targetRepsAdjustment } = calculateProgressiveOverloadWeight(
+      ex,
+      exerciseHistory?.[ex.id],
+      bodyProfile,
+      goal
+    );
 
     const cableConfig = ex.equipment === 'cable' ? (ex.cableConfig || {
       pulleyRatio: (ex.id === 'lat_pulldown' || ex.id === 'seated_cable_row') ? ('1:1' as const) : ('2:1' as const),
-      defaultStackKg: targetWeight,
+      defaultStackKg: peakWeight,
       noteVi: (ex.id === 'lat_pulldown' || ex.id === 'seated_cable_row')
         ? 'Ròng rọc đơn 1:1 (Lực kéo = 100% tạ cắm)'
         : 'Ròng rọc đôi 2:1 (Lực kéo = 50% tạ cắm do qua ròng rọc di động)'
@@ -815,7 +950,7 @@ export function generateSmartWorkout(
 
     // A. Thêm hiệp khởi động (Warmup) nếu được chọn bật
     if (includeWarmup && (ex.tier === 1 || getExerciseTierOrder(ex) === 1)) {
-      const w1 = roundGymWeight(targetWeight * 0.5, ex.equipment, ex.id);
+      const w1 = roundGymWeight(peakWeight * 0.5, ex.equipment, ex.id);
       sets.push({
         setIndex: currentSetIndex++,
         type: 'warmup',
@@ -825,8 +960,8 @@ export function generateSmartWorkout(
       });
 
       const threshold = ex.equipment === 'barbell' ? 45 : (ex.equipment === 'dumbbell' ? 16 : 25);
-      if (targetWeight > threshold) {
-        const w2 = roundGymWeight(targetWeight * 0.7, ex.equipment, ex.id);
+      if (peakWeight > threshold) {
+        const w2 = roundGymWeight(peakWeight * 0.65, ex.equipment, ex.id);
         sets.push({
           setIndex: currentSetIndex++,
           type: 'warmup',
@@ -837,7 +972,7 @@ export function generateSmartWorkout(
       }
     } else if (includeWarmup) {
       // Tier 2 & Tier 3: Thêm 1 hiệp khởi động nhẹ làm nóng khớp
-      const w1 = roundGymWeight(targetWeight * 0.5, ex.equipment, ex.id);
+      const w1 = roundGymWeight(peakWeight * 0.5, ex.equipment, ex.id);
       sets.push({
         setIndex: currentSetIndex++,
         type: 'warmup',
@@ -847,16 +982,135 @@ export function generateSmartWorkout(
       });
     }
 
-    // B. Các hiệp chính (Working sets) & Hiệp Max Effort (AMRAP)
-    for (let i = 1; i <= goalConfig.sets; i++) {
-      const isAmrap = isExerciseMaxEffort ? (i === goalConfig.sets) : (i === goalConfig.sets && goal === 'strength');
+    // B. Các hiệp chính theo Đà Kim Tự Tháp Tăng Tạ (Pyramid Weight Progression):
+    // Số hiệp làm việc: Tier 1 & 2 hoặc Strength: 4 hiệp; Tier 3: 3 hiệp
+    const numWorkingSets = (goal === 'strength' || ex.tier <= 2 || isExerciseMaxEffort) ? 4 : goalConfig.sets;
+
+    if (ex.equipment === 'bodyweight') {
+      // Bài tập bodyweight: tạ = 0, nén tải qua số rep
+      for (let i = 1; i <= numWorkingSets; i++) {
+        const isAmrap = isExerciseMaxEffort ? (i === numWorkingSets) : false;
+        let reps = goalConfig.reps;
+        if (i === 1) reps = Math.max(10, goalConfig.reps + 2);
+        else if (i === 2) reps = goalConfig.reps;
+        else if (i === 3) reps = Math.max(8, goalConfig.reps - 1);
+        else if (i === 4) reps = isAmrap ? goalConfig.reps : Math.max(10, goalConfig.reps + 2);
+
+        sets.push({
+          setIndex: currentSetIndex++,
+          type: isAmrap ? 'amrap' : 'working',
+          targetWeight: 0,
+          targetReps: reps,
+          isCompleted: false,
+          rir: isAmrap ? 0 : goalConfig.rir
+        });
+      }
+    } else if (numWorkingSets >= 4) {
+      // 4 Hiệp Chuẩn Kim Tự Tháp NSCA & Fitbod Pro:
+      // Set 1: Làm quen/khởi động đà (75% tạ làm việc, 10 reps)
+      const w1 = roundGymWeight(peakWeight * 0.75, ex.equipment, ex.id);
       sets.push({
         setIndex: currentSetIndex++,
-        type: isAmrap ? 'amrap' : 'working',
-        targetWeight: targetWeight,
-        targetReps: goalConfig.reps,
+        type: 'working',
+        targetWeight: w1,
+        targetReps: Math.max(8, (goalConfig.reps || 8) + 2 + targetRepsAdjustment),
         isCompleted: false,
-        rir: isAmrap ? 0 : goalConfig.rir,
+        rir: 2,
+        cableRatio: cableConfig?.pulleyRatio
+      });
+
+      // Set 2: Tăng tạ nén tải (90% tạ làm việc, 8 reps)
+      const w2 = roundGymWeight(peakWeight * 0.90, ex.equipment, ex.id);
+      sets.push({
+        setIndex: currentSetIndex++,
+        type: 'working',
+        targetWeight: w2,
+        targetReps: Math.max(6, (goalConfig.reps || 8) + targetRepsAdjustment),
+        isCompleted: false,
+        rir: 1,
+        cableRatio: cableConfig?.pulleyRatio
+      });
+
+      // Set 3: Tạ đỉnh (100% tạ làm việc, 6-8 reps)
+      sets.push({
+        setIndex: currentSetIndex++,
+        type: 'working',
+        targetWeight: peakWeight,
+        targetReps: Math.max(5, (goalConfig.reps || 8) + targetRepsAdjustment),
+        isCompleted: false,
+        rir: 1,
+        cableRatio: cableConfig?.pulleyRatio
+      });
+
+      // Set 4: Giữ tạ đỉnh hoặc Hiệp Max Effort (AMRAP), hoặc xả cơ Drop-set (Back-off set: giảm 15% tạ để bơm máu)
+      if (isExerciseMaxEffort) {
+        sets.push({
+          setIndex: currentSetIndex++,
+          type: 'amrap',
+          targetWeight: peakWeight,
+          targetReps: goalConfig.reps,
+          isCompleted: false,
+          rir: 0,
+          cableRatio: cableConfig?.pulleyRatio
+        });
+      } else if (goal === 'hypertrophy') {
+        // Back-off set giảm 15% tạ để bơm máu căng cơ xả axit lactic
+        const wBackoff = roundGymWeight(peakWeight * 0.85, ex.equipment, ex.id);
+        sets.push({
+          setIndex: currentSetIndex++,
+          type: 'working',
+          targetWeight: wBackoff,
+          targetReps: Math.max(8, (goalConfig.reps || 8) + 2),
+          isCompleted: false,
+          rir: 1,
+          cableRatio: cableConfig?.pulleyRatio
+        });
+      } else {
+        // Giữ tạ đỉnh
+        sets.push({
+          setIndex: currentSetIndex++,
+          type: 'working',
+          targetWeight: peakWeight,
+          targetReps: goalConfig.reps,
+          isCompleted: false,
+          rir: 1,
+          cableRatio: cableConfig?.pulleyRatio
+        });
+      }
+    } else {
+      // 3 Hiệp Kim Tự Tháp (Isolation cơ nhỏ):
+      // Set 1: Làm quen đà (80% tạ đỉnh, 10 reps)
+      const w1 = roundGymWeight(peakWeight * 0.80, ex.equipment, ex.id);
+      sets.push({
+        setIndex: currentSetIndex++,
+        type: 'working',
+        targetWeight: w1,
+        targetReps: Math.max(8, (goalConfig.reps || 8) + 2 + targetRepsAdjustment),
+        isCompleted: false,
+        rir: 2,
+        cableRatio: cableConfig?.pulleyRatio
+      });
+
+      // Set 2: Nén tải (90% tạ đỉnh, 8 reps)
+      const w2 = roundGymWeight(peakWeight * 0.90, ex.equipment, ex.id);
+      sets.push({
+        setIndex: currentSetIndex++,
+        type: 'working',
+        targetWeight: w2,
+        targetReps: Math.max(6, (goalConfig.reps || 8) + targetRepsAdjustment),
+        isCompleted: false,
+        rir: 1,
+        cableRatio: cableConfig?.pulleyRatio
+      });
+
+      // Set 3: 100% tạ đỉnh (AMRAP nếu là Max Effort)
+      sets.push({
+        setIndex: currentSetIndex++,
+        type: isExerciseMaxEffort ? 'amrap' : 'working',
+        targetWeight: peakWeight,
+        targetReps: Math.max(5, (goalConfig.reps || 8) + targetRepsAdjustment),
+        isCompleted: false,
+        rir: isExerciseMaxEffort ? 0 : goalConfig.rir,
         cableRatio: cableConfig?.pulleyRatio
       });
     }

@@ -6,10 +6,9 @@ dist/
 dist-ssr/
 *.local
 
-# Heavy folders & tools & workflows
+# Heavy folders & tools
 bin/
 shopify_sub/
-.github/
 *.exe
 
 # Logs

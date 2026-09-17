@@ -1,10 +1,19 @@
 import { HERNIATED_DISC_EXCLUDED_IDS, SPINE_SAFE_ALTERNATIVES, SPINE_SAFETY_REASONS, isExerciseSpineSafe } from '../data/spineSafety';
 import { Shield, ShieldAlert, AlertTriangle } from 'lucide-react';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, RefreshCw, Dumbbell, Search, Check, Filter, Target, Sparkles } from 'lucide-react';
+import { X, RefreshCw, Dumbbell, Search, Check, Filter, Target, Sparkles, Star, Ban } from 'lucide-react';
 import { PlannedExercise, ExerciseItem, EquipmentType } from '../types';
-import { EXERCISE_CATALOG, MUSCLES_INFO } from '../data/exerciseCatalog';
+import { 
+  EXERCISE_CATALOG, 
+  MUSCLES_INFO 
+} from '../data/exerciseCatalog';
+import { 
+  getExercisePreferences, 
+  setExercisePreference, 
+  subscribeExercisePreferences, 
+  ExercisePreferenceStatus 
+} from '../utils/exercisePreferences';
 
 interface SwapExerciseModalProps {
   currentExercise: PlannedExercise;
@@ -12,6 +21,8 @@ interface SwapExerciseModalProps {
   onClose: () => void;
   excludedExerciseIds?: string[];
   spineSafeMode?: boolean;
+  exercisePreferences?: Record<string, ExercisePreferenceStatus>;
+  onTogglePreference?: (exerciseId: string, pref: ExercisePreferenceStatus) => void;
 }
 
 export const SwapExerciseModal: React.FC<SwapExerciseModalProps> = ({
@@ -19,8 +30,21 @@ export const SwapExerciseModal: React.FC<SwapExerciseModalProps> = ({
   onSelectAlternative,
   onClose,
   excludedExerciseIds,
-  spineSafeMode = true
+  spineSafeMode = true,
+  exercisePreferences,
+  onTogglePreference
 }) => {
+  const [internalPrefs, setInternalPrefs] = useState<Record<string, ExercisePreferenceStatus>>(() => {
+    return (exercisePreferences as Record<string, ExercisePreferenceStatus>) || getExercisePreferences();
+  });
+
+  useEffect(() => {
+    return subscribeExercisePreferences(() => {
+      setInternalPrefs(getExercisePreferences());
+    });
+  }, []);
+
+  const currentPrefs = exercisePreferences || internalPrefs;
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [selectedEquipment, setSelectedEquipment] = useState<string>('all');
 
@@ -28,18 +52,24 @@ export const SwapExerciseModal: React.FC<SwapExerciseModalProps> = ({
   const currentMuscles = currentExercise.primaryMuscles.map(m => m.toLowerCase());
   const currentHead = currentExercise.muscleTarget?.primaryHead;
 
-  // Filter alternatives from catalog (excluding current exercise, missing machines, and spine-harmful exercises)
+  // Filter alternatives from catalog (excluding current exercise, missing machines, spine-harmful, and excluded by user)
   const allAlternatives = EXERCISE_CATALOG.filter(ex => {
     if (ex.id === currentExercise.exerciseId) return false;
     if (ex.id.startsWith('cardio_')) return false;
     if (excludedExerciseIds && excludedExerciseIds.includes(ex.id)) return false;
     if (spineSafeMode && HERNIATED_DISC_EXCLUDED_IDS.includes(ex.id)) return false;
+    // Nếu bị loại trừ bởi user và không tìm kiếm đích danh
+    if (!searchTerm.trim() && currentPrefs[ex.id] === 'exclude') return false;
     return true;
   });
 
-  // Sort & Score: prioritize same sub-muscle head first, then same primary muscle
+  // Sort & Score: prioritize same sub-muscle head first, favorite, then same primary muscle
   const scoredAlternatives = allAlternatives.map(ex => {
     let score = 0;
+    // Favorite bài tập: +25 điểm
+    if (currentPrefs[ex.id] === 'favorite') {
+      score += 25;
+    }
     // Same exact muscle head (e.g. both are vai_giua or vai_truoc)
     if (currentHead && ex.muscleTarget?.primaryHead === currentHead) {
       score += 10;
@@ -236,14 +266,57 @@ export const SwapExerciseModal: React.FC<SwapExerciseModalProps> = ({
                     </div>
                   </div>
 
-                  {/* Right: Select Button */}
-                  <button
-                    onClick={() => onSelectAlternative(exercise)}
-                    className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-black shrink-0 active:scale-95 transition shadow-sm flex items-center gap-1"
-                  >
-                    <span>Chọn</span>
-                    <Check className="w-3.5 h-3.5 stroke-[3]" />
-                  </button>
+                  {/* Right Actions: Favorite, Exclude, and Select Button */}
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const isFav = currentPrefs[exercise.id] === 'favorite';
+                        const nextStatus: ExercisePreferenceStatus = isFav ? 'standard' : 'favorite';
+                        setExercisePreference(exercise.id, nextStatus);
+                        setInternalPrefs(prev => ({ ...prev, [exercise.id]: nextStatus }));
+                        onTogglePreference?.(exercise.id, isFav ? 'standard' : 'favorite');
+                      }}
+                      className={`p-2 rounded-xl border transition active:scale-90 shadow-2xs ${
+                        currentPrefs[exercise.id] === 'favorite'
+                          ? 'bg-amber-100 border-amber-300 text-amber-900'
+                          : 'bg-white border-slate-200 text-slate-400 hover:text-amber-500 hover:bg-amber-50'
+                      }`}
+                      title={currentPrefs[exercise.id] === 'favorite' ? "Bỏ ưu tiên" : "Ưu tiên bài này (⭐)"}
+                    >
+                      <Star className={`w-4 h-4 ${currentPrefs[exercise.id] === 'favorite' ? 'fill-amber-400 text-amber-500' : ''}`} />
+                    </button>
+
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const isExc = currentPrefs[exercise.id] === 'exclude';
+                        const nextStatus: ExercisePreferenceStatus = isExc ? 'standard' : 'exclude';
+                        if (!isExc && !window.confirm(`Sếp có muốn loại trừ bài "${exercise.name}" khỏi các buổi tập không?`)) {
+                          return;
+                        }
+                        setExercisePreference(exercise.id, nextStatus);
+                        setInternalPrefs(prev => ({ ...prev, [exercise.id]: nextStatus }));
+                        onTogglePreference?.(exercise.id, isExc ? 'standard' : 'exclude');
+                      }}
+                      className={`p-2 rounded-xl border transition active:scale-90 shadow-2xs ${
+                        currentPrefs[exercise.id] === 'exclude'
+                          ? 'bg-rose-100 border-rose-300 text-rose-900'
+                          : 'bg-white border-slate-200 text-slate-400 hover:text-rose-600 hover:bg-rose-50'
+                      }`}
+                      title={currentPrefs[exercise.id] === 'exclude' ? "Bỏ loại trừ" : "Chặn / Loại trừ bài này (🚫)"}
+                    >
+                      <Ban className="w-4 h-4 text-rose-500" />
+                    </button>
+
+                    <button
+                      onClick={() => onSelectAlternative(exercise)}
+                      className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-black shrink-0 active:scale-95 transition shadow-sm flex items-center gap-1"
+                    >
+                      <span>Chọn</span>
+                      <Check className="w-3.5 h-3.5 stroke-[3]" />
+                    </button>
+                  </div>
                 </div>
               );
             })

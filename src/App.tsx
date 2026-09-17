@@ -35,6 +35,7 @@ import {
   calculateCompletedWorkoutFatigue,
   calculateE1RM,
   calculateTailoredWeight,
+  calculateProgressiveOverloadWeight,
   roundGymWeight,
   calculateExerciseRestSeconds,
   sanitizeWorkoutForSpineSafety
@@ -54,6 +55,11 @@ import {
   setProfileItem, 
   removeProfileItem 
 } from './utils/profileStorage';
+import { 
+  getExercisePreferences, 
+  setExercisePreference,
+  ExercisePreferenceStatus 
+} from './utils/exercisePreferences';
 
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'workout' | 'recovery' | 'history' | 'plan'>('workout');
@@ -167,6 +173,11 @@ export const App: React.FC = () => {
     };
   });
 
+  // Exercise preferences (Yêu thích ⭐ / Loại trừ 🚫)
+  const [exercisePreferences, setExercisePreferences] = useState<Record<string, ExercisePreferenceStatus>>(() => {
+    return getExercisePreferences();
+  });
+
   // Current Workout Plan
   const [currentWorkout, setCurrentWorkout] = useState<WorkoutPlan>(() => {
     let savedTargetMuscles: MuscleGroup[] | undefined = undefined;
@@ -208,7 +219,8 @@ export const App: React.FC = () => {
       savedPref,
       initialExcluded,
       undefined,
-      savedProfile
+      savedProfile,
+      exercisePreferences
     );
   });
 
@@ -320,7 +332,8 @@ export const App: React.FC = () => {
         equipmentPreference,
         excludedExerciseIds,
         undefined,
-        newProfile
+        newProfile,
+        exercisePreferences
       );
       setCurrentWorkout(fresh);
     }
@@ -347,7 +360,8 @@ export const App: React.FC = () => {
         equipmentPreference,
         newExcluded,
         undefined,
-        bodyProfile
+        bodyProfile,
+        exercisePreferences
       );
       setCurrentWorkout(fresh);
     }
@@ -368,7 +382,8 @@ export const App: React.FC = () => {
       equipmentPreference,
       excludedExerciseIds,
       undefined,
-      bodyProfile
+      bodyProfile,
+      exercisePreferences
     );
     setCurrentWorkout(fresh);
     if (activeTab !== 'workout') setActiveTab('workout');
@@ -394,7 +409,8 @@ export const App: React.FC = () => {
         equipmentPreference,
         excludedExerciseIds,
         undefined,
-        bodyProfile
+        bodyProfile,
+        exercisePreferences
       );
       setCurrentWorkout(fresh);
     }
@@ -420,7 +436,8 @@ export const App: React.FC = () => {
         pref,
         excludedExerciseIds,
         undefined,
-        bodyProfile
+        bodyProfile,
+        exercisePreferences
       );
       setCurrentWorkout(fresh);
     }
@@ -480,7 +497,8 @@ export const App: React.FC = () => {
         equipmentPreference,
         excludedExerciseIds,
         undefined,
-        bodyProfile
+        bodyProfile,
+        exercisePreferences
       ));
     }
   };
@@ -502,7 +520,8 @@ export const App: React.FC = () => {
         equipmentPreference,
         excludedExerciseIds,
         undefined,
-        bodyProfile
+        bodyProfile,
+        exercisePreferences
       ));
     }
   };
@@ -524,7 +543,8 @@ export const App: React.FC = () => {
         equipmentPreference,
         excludedExerciseIds,
         undefined,
-        bodyProfile
+        bodyProfile,
+        exercisePreferences
       ));
     }
   };
@@ -536,6 +556,7 @@ export const App: React.FC = () => {
     if (!replacement) {
       const alternates = EXERCISE_CATALOG.filter(
         e => e.id !== currentEx.exerciseId && 
+             exercisePreferences[e.id] !== 'exclude' &&
              (equipment.includes(e.equipment) || e.equipment === 'bodyweight') &&
              e.primaryMuscles.some(pm => currentEx.primaryMuscles.some(cm => cm.toLowerCase().includes(pm.muscle)))
       );
@@ -545,7 +566,12 @@ export const App: React.FC = () => {
     }
 
     if (replacement) {
-      const defaultWeight = calculateTailoredWeight(replacement, bodyProfile, goal);
+      const { targetWeight: defaultWeight } = calculateProgressiveOverloadWeight(
+        replacement, 
+        exerciseHistory?.[replacement.id], 
+        bodyProfile, 
+        goal
+      );
 
       const updated = { ...currentWorkout };
       const exList = [...updated.exercises];
@@ -574,6 +600,18 @@ export const App: React.FC = () => {
       };
       updated.exercises = exList;
       setCurrentWorkout(updated);
+    }
+  };
+
+  const handleTogglePreference = (exerciseId: string, pref: ExercisePreferenceStatus) => {
+    setExercisePreference(exerciseId, pref);
+    const updated = getExercisePreferences();
+    setExercisePreferences({ ...updated });
+    if (pref === 'exclude' && !isWorkingOut) {
+      const exIdx = currentWorkout.exercises.findIndex(e => e.exerciseId === exerciseId);
+      if (exIdx !== -1) {
+        handleSwapExercise(exIdx);
+      }
     }
   };
 
@@ -651,6 +689,16 @@ export const App: React.FC = () => {
             if (!existing.bestWeight || w > existing.bestWeight) existing.bestWeight = w;
             if (!existing.e1RM || e1 > existing.e1RM) existing.e1RM = e1;
           });
+
+          // Ghi nhận chỉ số hiệp làm việc gần nhất để tự động Progressive Overload buổi sau
+          const workingSets = completedSets.filter(s => s.type !== 'warmup');
+          const refSet = workingSets.length > 0 ? workingSets[workingSets.length - 1] : completedSets[completedSets.length - 1];
+          existing.lastWeight = refSet.loggedWeight ?? refSet.targetWeight ?? 0;
+          existing.lastReps = refSet.loggedReps ?? refSet.targetReps ?? 0;
+          existing.lastTargetReps = refSet.targetReps ?? 8;
+          existing.lastCompletedAllReps = workingSets.length > 0 
+            ? workingSets.every(s => (s.loggedReps ?? s.targetReps ?? 0) >= (s.targetReps ?? 0))
+            : true;
 
           nextHist[ex.exerciseId] = existing;
         });
@@ -805,6 +853,8 @@ export const App: React.FC = () => {
               onChangeEquipmentPreference={handleChangeEquipmentPreference}
               availableMachines={availableMachines}
               onOpenMachinesModal={() => setShowMachinesModal(true)}
+              exercisePreferences={exercisePreferences}
+              onTogglePreference={handleTogglePreference}
             />
           )}
 

@@ -1,6 +1,6 @@
 import { isExerciseSpineSafe, HERNIATED_DISC_EXCLUDED_IDS, SPINE_SAFETY_REASONS, SPINE_SAFE_ALTERNATIVES } from '../data/spineSafety';
 import React, { useState } from 'react';
-import { Play, Dumbbell, Clock, Layers, Sparkles, RefreshCw, ChevronRight, Info, Video, Eye, ArrowUp, ArrowDown, Flame, Target, Plus, Minus, Edit3 , Shield, ShieldAlert, AlertTriangle } from 'lucide-react';
+import { Play, Dumbbell, Clock, Layers, Sparkles, RefreshCw, ChevronRight, Info, Video, Eye, ArrowUp, ArrowDown, Flame, Target, Plus, Minus, Edit3 , Shield, ShieldAlert, AlertTriangle, Star, Ban } from 'lucide-react';
 import { WorkoutPlan, PlannedExercise, CardioType, ExerciseItem, MuscleGroup, EquipmentPreference, UserBodyProfile } from '../types';
 import { MUSCLES_INFO } from '../data/exerciseCatalog';
 import { PlateCalculatorModal } from './PlateCalculatorModal';
@@ -9,6 +9,7 @@ import { ExerciseDetailModal } from './ExerciseDetailModal';
 import { SwapExerciseModal } from './SwapExerciseModal';
 import { TargetMusclesModal } from './TargetMusclesModal';
 import { EditExerciseModal } from './EditExerciseModal';
+import { ExercisePreferenceStatus } from '../utils/exercisePreferences';
 
 interface WorkoutTabProps {
   workout: WorkoutPlan;
@@ -36,6 +37,8 @@ interface WorkoutTabProps {
   onOpenMachinesModal?: () => void;
   spineSafeMode?: boolean;
   onToggleSpineSafeMode?: (enabled: boolean) => void;
+  exercisePreferences?: Record<string, ExercisePreferenceStatus>;
+  onTogglePreference?: (exerciseId: string, pref: ExercisePreferenceStatus) => void;
 }
 
 export const WorkoutTab: React.FC<WorkoutTabProps> = ({
@@ -63,7 +66,9 @@ export const WorkoutTab: React.FC<WorkoutTabProps> = ({
   availableMachines,
   onOpenMachinesModal,
   spineSafeMode = true,
-  onToggleSpineSafeMode
+  onToggleSpineSafeMode,
+  exercisePreferences,
+  onTogglePreference
 }) => {
   const [activeCalcWeight, setActiveCalcWeight] = useState<number | null>(null);
   const [activeCableExercise, setActiveCableExercise] = useState<PlannedExercise | null>(null);
@@ -458,6 +463,7 @@ export const WorkoutTab: React.FC<WorkoutTabProps> = ({
           {workout.exercises.map((ex, idx) => {
             const firstSet = ex.sets[0];
             const hasThumbnail = ex.images && ex.images.length > 0;
+            const isFavorite = exercisePreferences?.[ex.exerciseId] === 'favorite';
 
             return (
               <div
@@ -490,10 +496,49 @@ export const WorkoutTab: React.FC<WorkoutTabProps> = ({
                   {/* Exercise info */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 bg-slate-100 text-slate-600 rounded-md">
-                        Bài {idx + 1} • Tier {ex.tier}
-                      </span>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 bg-slate-100 text-slate-600 rounded-md">
+                          Bài {idx + 1} • Tier {ex.tier}
+                        </span>
+                        {isFavorite && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-50 border border-amber-200 text-amber-800 text-[10px] font-black rounded-md shadow-2xs animate-in fade-in">
+                            <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-500" />
+                            <span>Ưu Tiên ⭐</span>
+                          </span>
+                        )}
+                      </div>
                       <div className="flex items-center gap-1">
+                        {/* Nút Ưu Tiên ⭐ */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onTogglePreference?.(ex.exerciseId, isFavorite ? 'standard' : 'favorite');
+                          }}
+                          className={`p-1.5 rounded-xl text-xs font-black flex items-center gap-1 active:scale-95 transition border shadow-2xs ${
+                            isFavorite
+                              ? 'bg-amber-100 text-amber-900 border-amber-300'
+                              : 'bg-slate-50 text-slate-400 border-slate-200 hover:bg-amber-50 hover:text-amber-600'
+                          }`}
+                          title={isFavorite ? "Đang ưu tiên bài này (AI luôn chọn khi cơ hồi phục) • Chạm để hủy" : "Chạm để AI luôn ưu tiên bài này (⭐)"}
+                        >
+                          <Star className={`w-3.5 h-3.5 ${isFavorite ? 'fill-amber-400 text-amber-500' : ''}`} />
+                        </button>
+
+                        {/* Nút Chặn / Loại trừ 🚫 */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (window.confirm(`Sếp có chắc chắn muốn loại trừ bài "${ex.exerciseName}" khỏi danh sách tập luyện không?`)) {
+                              onTogglePreference?.(ex.exerciseId, 'exclude');
+                              onSwapExercise(idx);
+                            }
+                          }}
+                          className="p-1.5 bg-slate-50 hover:bg-rose-50 text-slate-400 hover:text-rose-600 rounded-xl text-xs font-black flex items-center gap-1 active:scale-95 transition border border-slate-200 hover:border-rose-200 shadow-2xs"
+                          title="Loại trừ 100% bài này khỏi các buổi tập (🚫)"
+                        >
+                          <Ban className="w-3.5 h-3.5 text-rose-500" />
+                        </button>
+
                         {onMoveExercise && (
                           <>
                             <button
@@ -801,6 +846,8 @@ export const WorkoutTab: React.FC<WorkoutTabProps> = ({
           currentExercise={workout.exercises[swapTargetIndex]}
           excludedExerciseIds={workout.excludedExerciseIds}
           spineSafeMode={spineSafeMode}
+          exercisePreferences={exercisePreferences}
+          onTogglePreference={onTogglePreference}
           onSelectAlternative={(newEx) => {
             onSwapExercise(swapTargetIndex, newEx);
             setSwapTargetIndex(null);
