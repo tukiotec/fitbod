@@ -1,8 +1,8 @@
 import { isExerciseSpineSafe, HERNIATED_DISC_EXCLUDED_IDS, SPINE_SAFETY_REASONS, SPINE_SAFE_ALTERNATIVES } from '../data/spineSafety';
 import React, { useState, useRef } from 'react';
-import { Play, Dumbbell, Clock, Layers, Sparkles, RefreshCw, ChevronRight, Info, Video, Eye, ArrowUp, ArrowDown, Flame, Target, Plus, Minus, Edit3 , Shield, ShieldAlert, AlertTriangle, Star, Ban, GripVertical } from 'lucide-react';
+import { Play, Dumbbell, Clock, Layers, Sparkles, RefreshCw, ChevronRight, Info, Video, Eye, Flame, Target, Plus, Minus, Edit3 , Shield, ShieldAlert, AlertTriangle, Star, Ban, GripVertical } from 'lucide-react';
 import { WorkoutPlan, PlannedExercise, CardioType, ExerciseItem, MuscleGroup, EquipmentPreference, UserBodyProfile } from '../types';
-import { MUSCLES_INFO } from '../data/exerciseCatalog';
+import { MUSCLES_INFO, EXERCISE_CATALOG } from '../data/exerciseCatalog';
 import { PlateCalculatorModal } from './PlateCalculatorModal';
 import { CableStackModal } from './CableStackModal';
 import { ExerciseDetailModal } from './ExerciseDetailModal';
@@ -510,10 +510,25 @@ export const WorkoutTab: React.FC<WorkoutTabProps> = ({
         <div className="space-y-3">
           {workout.exercises.map((ex, idx) => {
             const firstSet = ex.sets[0];
-            const hasThumbnail = ex.images && ex.images.length > 0;
+            const catalogItem = EXERCISE_CATALOG.find(c => c.id === ex.exerciseId);
+            const activeImages = (catalogItem?.images && catalogItem.images.length > 0) ? catalogItem.images : (ex.images || []);
+            const hasThumbnail = activeImages.length > 0;
             const isFavorite = exercisePreferences?.[ex.exerciseId] === 'favorite';
             const isDraggingThis = draggedIndex === idx;
             const isOverThis = dragOverIndex === idx && draggedIndex !== idx;
+
+            const handleOpenModal = () => {
+              setSelectedExerciseForModal({
+                ...ex,
+                images: activeImages,
+                videoUrl: catalogItem?.videoUrl || ex.videoUrl,
+                videoEmbedId: catalogItem?.videoEmbedId || ex.videoEmbedId,
+                muscleTarget: catalogItem?.muscleTarget || ex.muscleTarget,
+                setup: catalogItem?.setup || ex.setup,
+                execution: catalogItem?.execution || ex.execution,
+                mistakes: catalogItem?.mistakes || ex.mistakes,
+              });
+            };
 
             return (
               <div
@@ -658,13 +673,16 @@ export const WorkoutTab: React.FC<WorkoutTabProps> = ({
                 <div className="flex items-start gap-3 mb-2">
                   {/* Thumbnail with quick view badge */}
                   <div 
-                    onClick={() => setSelectedExerciseForModal(ex)}
+                    onClick={handleOpenModal}
                     className="w-16 h-16 rounded-2xl bg-slate-900 overflow-hidden shrink-0 cursor-pointer relative group border border-slate-200/60 active:scale-95 transition"
                   >
                     {hasThumbnail ? (
                       <img
-                        src={ex.images![0]}
+                        src={activeImages[0]}
                         alt={ex.exerciseName}
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                        }}
                         className="w-full h-full object-cover group-hover:scale-105 transition"
                       />
                     ) : (
@@ -681,7 +699,7 @@ export const WorkoutTab: React.FC<WorkoutTabProps> = ({
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-1.5 mb-1">
                       <h4 
-                        onClick={() => setSelectedExerciseForModal(ex)}
+                        onClick={handleOpenModal}
                         className="font-black text-slate-900 text-sm truncate cursor-pointer hover:text-blue-600 transition"
                       >
                         {ex.exerciseName}
@@ -731,7 +749,7 @@ export const WorkoutTab: React.FC<WorkoutTabProps> = ({
                         <span 
                           onClick={(e) => {
                             e.stopPropagation();
-                            setSelectedExerciseForModal(ex);
+                            handleOpenModal();
                           }}
                           className="inline-flex items-center gap-1 text-[10px] font-black text-rose-600 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200 cursor-pointer hover:bg-rose-100 transition whitespace-nowrap"
                           title="Bấm để xem hình giải phẫu điểm phát lực và mẹo cảm nhận cơ"

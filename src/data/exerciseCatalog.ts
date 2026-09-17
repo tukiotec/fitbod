@@ -116,8 +116,8 @@ export const EXERCISE_CATALOG: (ExerciseItem & {
       "bodyView": "front"
     },
     "images": [
-      "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Incline_Barbell_Bench_Press/0.jpg",
-      "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Incline_Barbell_Bench_Press/1.jpg"
+      "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Barbell_Incline_Bench_Press_-_Medium_Grip/0.jpg",
+      "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Barbell_Incline_Bench_Press_-_Medium_Grip/1.jpg"
     ],
     "videoQuery": "how to incline barbell bench press",
     "videoUrl": "https://pub-585d42eb1aa64a67aedf483ec328d3fe.r2.dev/exercise-videos/male/barbell-incline-bench-press.mp4",
@@ -1328,8 +1328,8 @@ export const EXERCISE_CATALOG: (ExerciseItem & {
       "noteVi": "Ròng rọc đôi 2:1"
     },
     "images": [
-      "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Cable_Lateral_Raise/0.jpg",
-      "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Cable_Lateral_Raise/1.jpg"
+      "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Standing_Low-Pulley_Deltoid_Raise/0.jpg",
+      "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Standing_Low-Pulley_Deltoid_Raise/1.jpg"
     ],
     "videoQuery": "cable lateral raise form",
     "videoUrl": "https://pub-585d42eb1aa64a67aedf483ec328d3fe.r2.dev/exercise-videos/male/cable-lateral-raise.mp4",
@@ -1849,8 +1849,8 @@ export const EXERCISE_CATALOG: (ExerciseItem & {
       "bodyView": "back"
     },
     "images": [
-      "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Lying_Triceps_Extension/0.jpg",
-      "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Lying_Triceps_Extension/1.jpg"
+      "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Decline_EZ_Bar_Triceps_Extension/0.jpg",
+      "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Decline_EZ_Bar_Triceps_Extension/1.jpg"
     ],
     "videoQuery": "skull crushers proper form",
     "videoUrl": "https://pub-585d42eb1aa64a67aedf483ec328d3fe.r2.dev/exercise-videos/male/ez-barbell-lying-triceps-extension.mp4",
@@ -1959,8 +1959,8 @@ export const EXERCISE_CATALOG: (ExerciseItem & {
       "bodyView": "back"
     },
     "images": [
-      "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Triceps_Kickback/0.jpg",
-      "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Triceps_Kickback/1.jpg"
+      "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Tricep_Dumbbell_Kickback/0.jpg",
+      "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Tricep_Dumbbell_Kickback/1.jpg"
     ],
     "videoQuery": "dumbbell tricep kickback form",
     "videoUrl": "https://pub-585d42eb1aa64a67aedf483ec328d3fe.r2.dev/exercise-videos/male/dumbbell-kickback.mp4",
@@ -2171,8 +2171,8 @@ export const EXERCISE_CATALOG: (ExerciseItem & {
       "bodyView": "front"
     },
     "images": [
-      "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Single_Leg_Squat/0.jpg",
-      "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Single_Leg_Squat/1.jpg"
+      "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Split_Squat_with_Dumbbells/0.jpg",
+      "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Split_Squat_with_Dumbbells/1.jpg"
     ],
     "videoQuery": "bulgarian split squat form",
     "videoUrl": "https://pub-585d42eb1aa64a67aedf483ec328d3fe.r2.dev/exercise-videos/male/dumbbell-single-leg-squat.mp4",
@@ -2306,8 +2306,8 @@ export const EXERCISE_CATALOG: (ExerciseItem & {
       "bodyView": "back"
     },
     "images": [
-      "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Dumbbell_Romanian_Deadlift/0.jpg",
-      "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Dumbbell_Romanian_Deadlift/1.jpg"
+      "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Romanian_Deadlift/0.jpg",
+      "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Romanian_Deadlift/1.jpg"
     ],
     "videoQuery": "dumbbell rdl form",
     "videoUrl": "https://pub-585d42eb1aa64a67aedf483ec328d3fe.r2.dev/exercise-videos/male/single-dumbbell-stiff-leg-deadlift.mp4",
@@ -2609,8 +2609,8 @@ export const EXERCISE_CATALOG: (ExerciseItem & {
       "noteVi": "Ròng rọc đôi 2:1"
     },
     "images": [
-      "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Kneeling_Cable_Crunch/0.jpg",
-      "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Kneeling_Cable_Crunch/1.jpg"
+      "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Cable_Crunch/0.jpg",
+      "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Cable_Crunch/1.jpg"
     ],
     "videoQuery": "cable crunch kneeling form",
     "videoUrl": "https://pub-585d42eb1aa64a67aedf483ec328d3fe.r2.dev/exercise-videos/male/cable-kneeling-crunch.mp4",
@@ -3592,10 +3592,11 @@ export const EXERCISE_CATALOG: (ExerciseItem & {
       "noteVi": "Chỉnh ròng rọc ngang tầm mắt hoặc cao hơn trán."
     },
     "images": [
-      "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Cable_Rear-Delt_Fly/0.jpg",
-      "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Cable_Rear-Delt_Fly/1.jpg"
+      "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Cable_Rope_Rear-Delt_Rows/0.jpg",
+      "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Cable_Rope_Rear-Delt_Rows/1.jpg"
     ],
-    "videoEmbedId": "rep-qVOkqgk",
+    "videoUrl": "https://pub-585d42eb1aa64a67aedf483ec328d3fe.r2.dev/exercise-videos/male/cable-rear-delt-row-with-rope.mp4",
+    "videoEmbedId": "0Po47vvj9g4",
     "videoQuery": "cable face pull form rear delt rotator cuff",
     "setup": "Gắn dây thừng vào ròng rọc ngang mắt hoặc trán. Cầm dây thừng với ngón cái hướng về phía sau người.",
     "execution": "Lùi lại 1 bước, kéo dây thừng về ngang mặt, tách hai đầu dây thừng ra hai bên thái dương và xoay cùi chỏ ra sau.",
@@ -3631,8 +3632,8 @@ export const EXERCISE_CATALOG: (ExerciseItem & {
       "bodyView": "front"
     },
     "images": [
-      "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Lever_Shoulder_Press/0.jpg",
-      "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Lever_Shoulder_Press/1.jpg"
+      "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Leverage_Shoulder_Press/0.jpg",
+      "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Leverage_Shoulder_Press/1.jpg"
     ],
     "videoEmbedId": "WvLMauqrnK8",
     "videoQuery": "machine shoulder press proper form",
@@ -3670,8 +3671,8 @@ export const EXERCISE_CATALOG: (ExerciseItem & {
       "bodyView": "front"
     },
     "images": [
-      "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Dumbbell_Arnold_Press/0.jpg",
-      "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Dumbbell_Arnold_Press/1.jpg"
+      "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Arnold_Dumbbell_Press/0.jpg",
+      "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Arnold_Dumbbell_Press/1.jpg"
     ],
     "videoEmbedId": "3ml7BH7mNwQ",
     "videoQuery": "standing arnold press form dumbbell",
@@ -3757,6 +3758,7 @@ export const EXERCISE_CATALOG: (ExerciseItem & {
       "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Cable_Seated_Lateral_Raise/0.jpg",
       "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Cable_Seated_Lateral_Raise/1.jpg"
     ],
+    "videoUrl": "https://pub-585d42eb1aa64a67aedf483ec328d3fe.r2.dev/exercise-videos/male/cable-lateral-raise.mp4",
     "videoEmbedId": "PPrzBWZDOhA",
     "videoQuery": "cable single arm lateral raise form",
     "setup": "Hạ ròng rọc cáp xuống vị trí thấp. Đứng nghiêng người so với trụ cáp, tay xa cột cáp nắm quai cầm.",
@@ -4484,8 +4486,8 @@ export const EXERCISE_CATALOG: (ExerciseItem & {
       "noteVi": "Chỉnh ròng rọc cáp thấp nhất, lắp dây thừng."
     },
     "images": [
-      "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Band_Good_Morning_(Pull_Through)/0.jpg",
-      "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Band_Good_Morning_(Pull_Through)/1.jpg"
+      "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Pull_Through/0.jpg",
+      "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Pull_Through/1.jpg"
     ],
     "videoEmbedId": "v_L0e-SntSU",
     "videoQuery": "cable pull through form for glutes",

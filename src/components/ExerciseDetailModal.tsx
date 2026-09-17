@@ -20,16 +20,16 @@ export const ExerciseDetailModal: React.FC<ExerciseDetailModalProps> = ({
   exercise,
   onClose
 }) => {
-  // Luôn nạp thông tin từ EXERCISE_CATALOG để bài tập từ session cũ vẫn có đầy đủ videoUrl chuẩn
+  // Luôn nạp thông tin từ EXERCISE_CATALOG để bài tập từ session cũ vẫn có đầy đủ videoUrl & ảnh chuẩn 100%
   const catalogItem = EXERCISE_CATALOG.find(c => c.id === exercise.exerciseId);
-  const activeVideoUrl = exercise.videoUrl || catalogItem?.videoUrl;
-  const activeVideoEmbedId = exercise.videoEmbedId || catalogItem?.videoEmbedId;
+  const activeVideoUrl = catalogItem?.videoUrl || exercise.videoUrl;
+  const activeVideoEmbedId = catalogItem?.videoEmbedId || exercise.videoEmbedId;
   const activeVideoQuery = (catalogItem as any)?.videoQuery || `${exercise.exerciseName} form guide`;
-  const activeImages = (exercise.images && exercise.images.length > 0) ? exercise.images : (catalogItem?.images || []);
-  const activeMuscleTarget = exercise.muscleTarget || catalogItem?.muscleTarget;
-  const activeSetup = exercise.setup || catalogItem?.setup;
-  const activeExecution = exercise.execution || catalogItem?.execution;
-  const activeMistakes = exercise.mistakes || catalogItem?.mistakes;
+  const activeImages = (catalogItem?.images && catalogItem.images.length > 0) ? catalogItem.images : (exercise.images || []);
+  const activeMuscleTarget = catalogItem?.muscleTarget || exercise.muscleTarget;
+  const activeSetup = catalogItem?.setup || exercise.setup;
+  const activeExecution = catalogItem?.execution || exercise.execution;
+  const activeMistakes = catalogItem?.mistakes || exercise.mistakes;
 
   // Quản lý trạng thái Ưu tiên (Favorite ⭐) / Loại trừ (Exclude 🚫)
   const [prefStatus, setPrefStatus] = useState<ExercisePreferenceStatus>(() => {
@@ -252,6 +252,32 @@ export const ExerciseDetailModal: React.FC<ExerciseDetailModalProps> = ({
               )}
             </div>
 
+            {/* Fallback notification toast if YouTube was auto-fallback */}
+            {fallbackToast && (
+              <div className="absolute top-14 left-3 right-3 z-20 bg-amber-500/95 backdrop-blur-md text-slate-950 px-3 py-1.5 rounded-xl text-[11px] font-bold flex items-center justify-between shadow-lg border border-amber-400 animate-in fade-in slide-in-from-top-1 duration-200">
+                <div className="flex items-center gap-1.5 truncate mr-2">
+                  <AlertTriangle className="w-3.5 h-3.5 shrink-0 text-slate-950" />
+                  <span className="truncate">{fallbackToast}</span>
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <a
+                    href={`https://www.youtube.com/watch?v=${activeVideoEmbedId}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline text-[10px] font-black hover:text-black flex items-center gap-0.5 bg-black/10 px-1.5 py-0.5 rounded"
+                  >
+                    Mở YouTube ↗
+                  </a>
+                  <button
+                    onClick={() => setFallbackToast(null)}
+                    className="p-0.5 hover:bg-black/10 rounded text-slate-950"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Indicator Badge when on Loop Video */}
             {activeMediaTab === 'loop' && (
               <div className="absolute bottom-3 right-3 z-10 flex items-center gap-1 bg-black/70 backdrop-blur-md px-2.5 py-1 rounded-full text-[10px] font-extrabold text-blue-300 border border-blue-500/20 pointer-events-none">
@@ -312,8 +338,10 @@ export const ExerciseDetailModal: React.FC<ExerciseDetailModalProps> = ({
                     onError={() => {
                       setIsVideoLoading(false);
                       setVideoError(true);
-                      if (hasYoutube) {
+                      if (hasYoutube && !youtubeError) {
                         setActiveMediaTab('youtube');
+                      } else if (hasImages) {
+                        setActiveMediaTab('animation');
                       }
                     }}
                   />
@@ -324,25 +352,71 @@ export const ExerciseDetailModal: React.FC<ExerciseDetailModalProps> = ({
             {/* 2. YouTube Form Embed Content */}
             {activeMediaTab === 'youtube' && hasYoutube && (
               <div className="w-full h-72 bg-black flex items-center justify-center relative overflow-hidden">
-                <iframe
-                  className="w-full h-full border-0"
-                  src={`https://www.youtube.com/embed/${activeVideoEmbedId}?autoplay=1&mute=1&loop=1&playlist=${activeVideoEmbedId}&playsinline=1&controls=1&rel=0`}
-                  title={exercise.exerciseName}
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                />
-                <div className="absolute top-2.5 right-2.5 z-10 pointer-events-auto">
-                  <a
-                    href={`https://www.youtube.com/watch?v=${activeVideoEmbedId}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-1.5 px-2.5 py-1 bg-black/75 hover:bg-red-600 backdrop-blur-md text-white rounded-xl text-[10px] font-black border border-white/20 shadow-md transition active:scale-95"
-                    title="Mở trực tiếp trên ứng dụng YouTube"
-                  >
-                    <Video className="w-3 h-3 text-red-400" />
-                    <span>Mở YouTube App ↗</span>
-                  </a>
-                </div>
+                {youtubeError ? (
+                  <div className="w-full h-full flex flex-col items-center justify-center bg-slate-950 p-6 text-center text-white animate-in fade-in duration-200">
+                    <div className="w-12 h-12 rounded-2xl bg-red-500/10 border border-red-500/30 flex items-center justify-center mb-2.5">
+                      <AlertTriangle className="w-6 h-6 text-red-400" />
+                    </div>
+                    <h4 className="text-sm font-extrabold text-white mb-1">
+                      Video YouTube Giới Hạn Quyền Nhúng
+                    </h4>
+                    <p className="text-xs text-slate-400 max-w-xs mb-3.5 leading-relaxed">
+                      Tác giả video cài đặt hạn chế phát trực tiếp trong ứng dụng. Sếp có thể bấm mở trực tiếp trên YouTube app hoặc xem mô phỏng bên dưới.
+                    </p>
+                    <div className="flex flex-wrap items-center justify-center gap-2">
+                      <a
+                        href={`https://www.youtube.com/watch?v=${activeVideoEmbedId}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1.5 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition shadow-lg shadow-red-900/30 active:scale-95"
+                      >
+                        <Video className="w-4 h-4" />
+                        <span>Mở Trên YouTube App ↗</span>
+                      </a>
+                      {hasLoopVideo && (
+                        <button
+                          onClick={() => setActiveMediaTab('loop')}
+                          className="flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold transition"
+                        >
+                          <Film className="w-4 h-4 text-blue-400" />
+                          <span>Video Loop 1080p</span>
+                        </button>
+                      )}
+                      {hasImages && (
+                        <button
+                          onClick={() => setActiveMediaTab('animation')}
+                          className="flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold transition"
+                        >
+                          <ImageIcon className="w-4 h-4 text-indigo-400" />
+                          <span>Ảnh Động 2 Pha</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <iframe
+                      className="w-full h-full border-0"
+                      src={`https://www.youtube.com/embed/${activeVideoEmbedId}?autoplay=1&mute=1&loop=1&playlist=${activeVideoEmbedId}&playsinline=1&controls=1&rel=0&enablejsapi=1`}
+                      title={exercise.exerciseName}
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                      onError={handleYoutubeError}
+                    />
+                    <div className="absolute top-2.5 right-2.5 z-10 pointer-events-auto">
+                      <a
+                        href={`https://www.youtube.com/watch?v=${activeVideoEmbedId}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1.5 px-2.5 py-1 bg-black/75 hover:bg-red-600 backdrop-blur-md text-white rounded-xl text-[10px] font-black border border-white/20 shadow-md transition active:scale-95"
+                        title="Mở trực tiếp trên ứng dụng YouTube"
+                      >
+                        <Video className="w-3 h-3 text-red-400" />
+                        <span>Mở YouTube App ↗</span>
+                      </a>
+                    </div>
+                  </>
+                )}
               </div>
             )}
 
