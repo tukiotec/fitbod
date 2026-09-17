@@ -251,7 +251,7 @@ export const EXERCISE_CATALOG: (ExerciseItem & {
     ],
     "videoQuery": "decline dumbbell press",
     "videoUrl": "https://pub-585d42eb1aa64a67aedf483ec328d3fe.r2.dev/exercise-videos/male/decline-dumbbell-bench-press-45-degree.mp4",
-    "videoEmbedId": "0xRvl4Qv3EY",
+    "videoEmbedId": "1OdTFeN90W4",
     "setup": "Cài chân vào móc ghế dốc xuống, cầm tạ ngang ngực dưới.",
     "execution": "Hạ tạ xuống 2 bên chân ngực dưới, đẩy lên dứt khoát.",
     "mistakes": "Không gập cổ quá mức khi nằm dốc xuống."
@@ -341,7 +341,7 @@ export const EXERCISE_CATALOG: (ExerciseItem & {
     ],
     "videoQuery": "low to high cable fly",
     "videoUrl": "https://pub-585d42eb1aa64a67aedf483ec328d3fe.r2.dev/exercise-videos/male/cable-standing-fly-crossover-fly.mp4",
-    "videoEmbedId": "M1N8844oXRQ",
+    "videoEmbedId": "ZWa8v57fCZ8",
     "setup": "Cáp đặt ở nấc thấp nhất sát sàn. Đứng giữa giàn cáp.",
     "execution": "Kéo 2 tay từ dưới lên trên chụm trước cằm, siết chặt cơ ngực trên.",
     "mistakes": "Không dùng vai kéo mà hãy tập trung dùng ngực trên co rút."
@@ -386,7 +386,7 @@ export const EXERCISE_CATALOG: (ExerciseItem & {
     ],
     "videoQuery": "high to low cable fly",
     "videoUrl": "https://pub-585d42eb1aa64a67aedf483ec328d3fe.r2.dev/exercise-videos/male/band-high-fly.mp4",
-    "videoEmbedId": "WEM9yP_Qk_0",
+    "videoEmbedId": "5SrkaIbDth4",
     "setup": "Cáp đặt nấc cao nhất. Đứng nghiêng người về trước.",
     "execution": "Kéo cáp chúc xuống hai bên hông đùi, siết đáy ngực.",
     "mistakes": "Không để vai bị nhô về trước."
@@ -426,7 +426,7 @@ export const EXERCISE_CATALOG: (ExerciseItem & {
     ],
     "videoQuery": "pec deck machine form",
     "videoUrl": "https://pub-585d42eb1aa64a67aedf483ec328d3fe.r2.dev/exercise-videos/male/lever-pec-deck-fly.mp4",
-    "videoEmbedId": "eGjt4lkGeZ4",
+    "videoEmbedId": "a9vQ_hwIksU",
     "setup": "Chỉnh chiều cao ghế sao cho tay cầm ngang ngực giữa.",
     "execution": "Ép vào giữ 1 giây, mở ra chậm trong 3 giây.",
     "mistakes": "Không để tạ va đập vào cọc khi mở rộng tay."
@@ -511,7 +511,7 @@ export const EXERCISE_CATALOG: (ExerciseItem & {
     ],
     "videoQuery": "incline chest press machine",
     "videoUrl": "https://pub-585d42eb1aa64a67aedf483ec328d3fe.r2.dev/exercise-videos/male/lever-incline-hammer-chest-press.mp4",
-    "videoEmbedId": "4kZ2VvO5p-k",
+    "videoEmbedId": "VesHgJR14E8",
     "setup": "Ngồi vững trên ghế máy dốc, tay nắm chắc cán đẩy.",
     "execution": "Đẩy dứt khoát theo quỹ đạo máy, thở ra.",
     "mistakes": "Không nhấc lưng khỏi đệm ghế."
@@ -696,7 +696,7 @@ export const EXERCISE_CATALOG: (ExerciseItem & {
     ],
     "videoQuery": "barbell bent over row form",
     "videoUrl": "https://pub-585d42eb1aa64a67aedf483ec328d3fe.r2.dev/exercise-videos/male/barbell-underhand-bent-over-row.mp4",
-    "videoEmbedId": "FWJR5Ve8gkQ",
+    "videoEmbedId": "qXrTDQG1oUQ",
     "setup": "Cầm đòn rộng hơn vai, gập hông giữ lưng thẳng 45 độ.",
     "execution": "Kéo đòn về phía rốn, ép bả vai, thở ra. Hạ từ từ có kiểm soát.",
     "mistakes": "Không giật người dùng quán tính, không cong lưng dưới."
@@ -841,7 +841,7 @@ export const EXERCISE_CATALOG: (ExerciseItem & {
     ],
     "videoQuery": "v bar lat pulldown",
     "videoUrl": "https://pub-585d42eb1aa64a67aedf483ec328d3fe.r2.dev/exercise-videos/male/cable-seated-high-row-v-bar.mp4",
-    "videoEmbedId": "ecRF8ERf54k",
+    "videoEmbedId": "jXRxMJhOCc0",
     "setup": "Lắp tay cầm chữ V vào chốt kéo xô, cố định chân dưới đệm.",
     "execution": "Kéo xuống chạm ngực giữa, ngực ưỡn đón tạ, nhả tay hết biên độ kéo dãn xô.",
     "mistakes": "Không gù lưng khi nhả tạ lên cao."
@@ -937,7 +937,7 @@ export const EXERCISE_CATALOG: (ExerciseItem & {
     ],
     "videoQuery": "straight arm pulldown form",
     "videoUrl": "https://pub-585d42eb1aa64a67aedf483ec328d3fe.r2.dev/exercise-videos/male/cable-standing-lift.mp4",
-    "videoEmbedId": "l_vRk6g31y4",
+    "videoEmbedId": "hAMcfubonDc",
     "setup": "Đứng lùi lại 1 bước, người hơi gập 30 độ, cầm thanh đòn ngang vai.",
     "execution": "Đè thanh đòn theo hình vòng cung xuống chạm đùi, thở ra và siết xô cực đại.",
     "mistakes": "Không gập cùi chỏ biến thành bài tricep pushdown."
@@ -1072,7 +1072,7 @@ export const EXERCISE_CATALOG: (ExerciseItem & {
     ],
     "videoQuery": "chin up proper form",
     "videoUrl": "https://pub-585d42eb1aa64a67aedf483ec328d3fe.r2.dev/exercise-videos/male/chin-ups-narrow-parallel-grip.mp4",
-    "videoEmbedId": "b-ztMQpE0wU",
+    "videoEmbedId": "Oi3bW9nQmGI",
     "setup": "Cầm xà tay ngửa hẹp bằng vai.",
     "execution": "Kéo cằm vượt qua xà, gồng chuột tay trước ở đỉnh.",
     "mistakes": "Không buông rơi tự do khi hạ xuống."
@@ -1463,7 +1463,7 @@ export const EXERCISE_CATALOG: (ExerciseItem & {
     ],
     "videoQuery": "reverse pec deck form",
     "videoUrl": "https://pub-585d42eb1aa64a67aedf483ec328d3fe.r2.dev/exercise-videos/male/lever-lateral-raise.mp4",
-    "videoEmbedId": "2q8fEw3q5b0",
+    "videoEmbedId": "7tgx6QHB0-A",
     "setup": "Chỉnh tay cầm máy ở vị trí trong cùng, ngực áp sát đệm ghế.",
     "execution": "Dang tay rộng ra sau ngang vai, siết vai sau.",
     "mistakes": "Không rụt cổ nhún cầu vai."
@@ -1707,7 +1707,7 @@ export const EXERCISE_CATALOG: (ExerciseItem & {
     ],
     "videoQuery": "standing cable bicep curl",
     "videoUrl": "https://pub-585d42eb1aa64a67aedf483ec328d3fe.r2.dev/exercise-videos/male/cable-standing-inner-curl.mp4",
-    "videoEmbedId": "AsAVbBNbKwg",
+    "videoEmbedId": "u9XtfyqeJd4",
     "setup": "Cáp gắn ở nấc thấp nhất, gắn thanh đòn thẳng hoặc lượn sóng.",
     "execution": "Đứng thẳng cuốn tạ lên ngang ngực, siết 1 nhịp rồi hạ chậm.",
     "mistakes": "Không đưa cùi chỏ về trước khi cuốn lên."
@@ -1821,7 +1821,7 @@ export const EXERCISE_CATALOG: (ExerciseItem & {
     ],
     "videoQuery": "cable overhead tricep extension",
     "videoUrl": "https://pub-585d42eb1aa64a67aedf483ec328d3fe.r2.dev/exercise-videos/male/cable-rope-high-pulley-overhead-triceps-extension.mp4",
-    "videoEmbedId": "_Gs0t8zK-8A",
+    "videoEmbedId": "9Ark9S11uXw",
     "setup": "Cáp ngang ngực hoặc nấc cao, đứng quay lưng lại giàn cáp.",
     "execution": "Duỗi tay thẳng ra phía trước đầu, khóa tay sau ở đỉnh.",
     "mistakes": "Không xòe rộng cùi chỏ sang 2 bên."
@@ -1934,7 +1934,7 @@ export const EXERCISE_CATALOG: (ExerciseItem & {
     "setup": "Ngồi trên ghế thẳng lưng, dùng 2 tay đỡ lòng quả tạ đơn giơ thẳng qua đầu.",
     "execution": "Chỉ gập cùi chỏ hạ tạ ra sau đầu đến khi tay sau căng dãn tối đa. Đẩy tạ thẳng đứng lên trên thở ra.",
     "mistakes": "Không xòe cùi chỏ quá rộng sang hai bên làm giảm áp lực lên đầu dài.",
-    "videoEmbedId": "_gsUck-7dqQ"
+    "videoEmbedId": "b_r_LW4HEcM"
   },
   {
     "id": "dumbbell_tricep_kickback",
@@ -1967,7 +1967,7 @@ export const EXERCISE_CATALOG: (ExerciseItem & {
     "setup": "Một tay tựa lên ghế hoặc đùi, thân người cúi gập song song với sàn.",
     "execution": "Cùi chỏ ép sát sườn ngang ngực, duỗi cẳng tay thẳng ra sau, siết chặt tay sau rồi hạ về góc 90 độ.",
     "mistakes": "Không đung đưa hạ cùi chỏ xuống đất làm mất lực cô lập.",
-    "videoEmbedId": "6SS6KTStfNE"
+    "videoEmbedId": "WhBxKbe1-NU"
   },
   {
     "id": "barbell_squat",
@@ -2221,7 +2221,7 @@ export const EXERCISE_CATALOG: (ExerciseItem & {
     ],
     "videoQuery": "goblet squat form",
     "videoUrl": "https://pub-585d42eb1aa64a67aedf483ec328d3fe.r2.dev/exercise-videos/male/dumbbell-goblet-squat.mp4",
-    "videoEmbedId": "MeIiIdhpXTs",
+    "videoEmbedId": "lRYBbchqxtI",
     "setup": "Hai tay ôm 1 đầu tạ đơn sát ngực, chân rộng hơn vai, mũi chân chĩa 30 độ.",
     "execution": "Hạ mông sâu xuống giữa 2 gối, đạp gót chân đứng thẳng dậy.",
     "mistakes": "Không để tạ rời xa khỏi ngực làm mỏi tay thay vì đùi."
@@ -2311,7 +2311,7 @@ export const EXERCISE_CATALOG: (ExerciseItem & {
     ],
     "videoQuery": "dumbbell rdl form",
     "videoUrl": "https://pub-585d42eb1aa64a67aedf483ec328d3fe.r2.dev/exercise-videos/male/single-dumbbell-stiff-leg-deadlift.mp4",
-    "videoEmbedId": "8PO0YgKjK3A",
+    "videoEmbedId": "hu3jRvTc_po",
     "setup": "Cầm 2 tạ đơn trước đùi, chân rộng bằng hông.",
     "execution": "Đẩy mông ra sau, hạ tạ qua gối rồi siết mông đứng dậy.",
     "mistakes": "Không để tạ văng xa khỏi chân."
@@ -2464,7 +2464,7 @@ export const EXERCISE_CATALOG: (ExerciseItem & {
     ],
     "videoQuery": "cable glute kickback form",
     "videoUrl": "https://pub-585d42eb1aa64a67aedf483ec328d3fe.r2.dev/exercise-videos/male/lever-standing-hip-extension.mp4",
-    "videoEmbedId": "1T6mJmFj2R0",
+    "videoEmbedId": "l4zReIOfPCQ",
     "setup": "Cáp nấc thấp nhất, gắn quai đeo cổ chân, tay vịn chắc vào cột máy.",
     "execution": "Đá chân thẳng ra sau, gồng siết mông 1 giây rồi thu chân về.",
     "mistakes": "Không võng lưng dưới khi đá chân ra sau."
@@ -2614,7 +2614,7 @@ export const EXERCISE_CATALOG: (ExerciseItem & {
     ],
     "videoQuery": "cable crunch kneeling form",
     "videoUrl": "https://pub-585d42eb1aa64a67aedf483ec328d3fe.r2.dev/exercise-videos/male/cable-kneeling-crunch.mp4",
-    "videoEmbedId": "2fouro_YQnk",
+    "videoEmbedId": "dkGwcfo9zto",
     "setup": "Quỳ gối trước giàn cáp cao, 2 tay giữ 2 đầu dây thừng bên tai.",
     "execution": "Gập người cuộn tròn cột sống xuống sàn, thở hết hơi siết cơ bụng.",
     "mistakes": "CẤM gập hông biến thành ngồi xổm, hông phải giữ nguyên góc 90 độ."
@@ -2734,7 +2734,7 @@ export const EXERCISE_CATALOG: (ExerciseItem & {
     ],
     "videoQuery": "stationary bike workout form setup",
     "videoUrl": "https://pub-585d42eb1aa64a67aedf483ec328d3fe.r2.dev/exercise-videos/male/stationary-bike.mp4",
-    "videoEmbedId": "v8j-Y8Q3n7E",
+    "videoEmbedId": "csNeUKYBW0E",
     "setup": "Chỉnh yên xe ngang tầm xương hông khi đứng cạnh xe, chân duỗi gần hết ở đáy bàn đạp.",
     "execution": "Đạp xe duy trì nhịp thở sâu, lưng thẳng, không gù vai.",
     "mistakes": "Không chỉnh yên quá thấp gây đau khớp gối."
@@ -2773,7 +2773,7 @@ export const EXERCISE_CATALOG: (ExerciseItem & {
     ],
     "videoQuery": "incline treadmill walking form fat burn",
     "videoUrl": "https://pub-585d42eb1aa64a67aedf483ec328d3fe.r2.dev/exercise-videos/male/running.mp4",
-    "videoEmbedId": "q8b5L6-8oD8",
+    "videoEmbedId": "HwXYMPGjlUg",
     "setup": "Bật máy đi bộ, chỉnh độ dốc 8-12% và tốc độ vừa phải.",
     "execution": "Bước dài sải chân, đạp mạnh gót chân đẩy người lên dốc.",
     "mistakes": "Tuyệt đối không bám chặt 2 tay vịn ngửa người ra sau (triệt tiêu tác dụng của độ dốc)."
@@ -2813,7 +2813,7 @@ export const EXERCISE_CATALOG: (ExerciseItem & {
     ],
     "videoQuery": "how to use elliptical trainer machine form",
     "videoUrl": "https://pub-585d42eb1aa64a67aedf483ec328d3fe.r2.dev/exercise-videos/male/elliptical.mp4",
-    "videoEmbedId": "kLzN2L5q4Yg",
+    "videoEmbedId": "EesEvYohy5o",
     "setup": "Đứng vững 2 chân lên bàn đạp, 2 tay nắm tay cầm di động.",
     "execution": "Đạp chân theo quỹ đạo tròn mượt mà kết hợp tay đẩy kéo nhịp nhàng.",
     "mistakes": "Không kiễng gót chân rời khỏi bàn đạp quá nhiều."
@@ -2895,7 +2895,7 @@ export const EXERCISE_CATALOG: (ExerciseItem & {
       "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Low_Cable_Crossover/0.jpg",
       "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Low_Cable_Crossover/1.jpg"
     ],
-    "videoEmbedId": "M1N8844oXRQ",
+    "videoEmbedId": "u5X5x1fw_SA",
     "videoQuery": "cable low to high fly form upper chest",
     "setup": "Hạ 2 ròng rọc cáp xuống vị trí thấp nhất. Cầm hai tay cầm đơn, bước một chân tới trước, thân người hơi đổ về trước 10-15 độ.",
     "execution": "Gồng chặt cơ bụng, kéo hai tay theo hình vòng cung từ dưới lên ngang ngực trên/cằm. Dừng lại 1 giây siết chặt cơ ngực rồi hạ về có kiểm soát.",
@@ -2983,7 +2983,7 @@ export const EXERCISE_CATALOG: (ExerciseItem & {
       "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Leverage_Incline_Chest_Press/0.jpg",
       "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Leverage_Incline_Chest_Press/1.jpg"
     ],
-    "videoEmbedId": "4kZ2VvO5p-k",
+    "videoEmbedId": "VesHgJR14E8",
     "videoQuery": "machine incline chest press form",
     "setup": "Chỉnh chiều cao ghế sao cho hai tay cầm ngang tầm xương quai xanh hoặc phần trên ngực. Bàn chân bám chắc sàn.",
     "execution": "Hít sâu gồng bụng, đẩy mạnh tay cầm theo quỹ đạo máy lên phía trên, không khóa chết khớp khuỷu. Hạ từ từ 2-3 giây để kéo giãn cơ ngực.",
@@ -3027,7 +3027,7 @@ export const EXERCISE_CATALOG: (ExerciseItem & {
       "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Smith_Machine_Bench_Press/0.jpg",
       "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Smith_Machine_Bench_Press/1.jpg"
     ],
-    "videoEmbedId": "u56vV1_f_4w",
+    "videoEmbedId": "gQ3afio08V8",
     "videoQuery": "smith machine bench press proper form",
     "setup": "Kê ghế phẳng ngay dưới ray trượt thanh đòn máy Smith sao cho đòn tạ thẳng hàng với núm ngực giữa.",
     "execution": "Xoay cổ tay mở khóa đòn tạ, hạ tạ kiểm soát xuống chạm nhẹ ngực giữa, sau đó đẩy dứt khoát lên trên.",
@@ -3149,7 +3149,7 @@ export const EXERCISE_CATALOG: (ExerciseItem & {
       "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Bent-Arm_Dumbbell_Pullover/0.jpg",
       "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Bent-Arm_Dumbbell_Pullover/1.jpg"
     ],
-    "videoEmbedId": "FK4rkZ8z2U8",
+    "videoEmbedId": "ZhPOEQJRzBU",
     "videoQuery": "how to dumbbell pullover form for chest and lats",
     "setup": "Nằm ngang người trên ghế phẳng (chỉ tựa phần lưng trên lên ghế), hai bàn chân bám sàn, hạ hông nhẹ. Hai tay đỡ quả tạ đơn bằng lòng bàn tay đan nhau hình kim cương.",
     "execution": "Hạ tạ từ từ qua đỉnh đầu ra sau theo hình vòng cung, hít sâu căng tràn lồng ngực. Kéo tạ ngược lên lại vị trí trên ngực và thở ra.",
@@ -3194,7 +3194,7 @@ export const EXERCISE_CATALOG: (ExerciseItem & {
       "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/V-Bar_Pulldown/0.jpg",
       "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/V-Bar_Pulldown/1.jpg"
     ],
-    "videoEmbedId": "ecRF8ERf54k",
+    "videoEmbedId": "7FeEgk0bv9s",
     "videoQuery": "neutral grip lat pulldown form v bar",
     "setup": "Gắn tay cầm song song lên máy Lat Pulldown. Chỉnh đệm đùi ép chặt đùi giữ người cố định.",
     "execution": "Ưỡn nhẹ lồng ngực, kéo tay cầm xuống chạm nhẹ ức trên bằng cách dìm hai cùi chỏ xuống sườn. Giữ 1 giây rồi nhả từ từ lên trên.",
@@ -3238,7 +3238,7 @@ export const EXERCISE_CATALOG: (ExerciseItem & {
       "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/One_Arm_Lat_Pulldown/0.jpg",
       "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/One_Arm_Lat_Pulldown/1.jpg"
     ],
-    "videoEmbedId": "5V3N5eNl3c8",
+    "videoEmbedId": "8zA8DjHRaq0",
     "videoQuery": "single arm lat pulldown proper form",
     "setup": "Quỳ gối hoặc ngồi nghiêng nhẹ dưới ròng rọc cáp cao. Tay nắm quai cầm đơn duỗi thẳng lên trên kéo giãn cơ xô.",
     "execution": "Kéo cùi chỏ thẳng xuống hướng về phía túi quần cùng bên, đồng thời hơi nghiêng nhẹ người để co ngắn thớ xô dưới. Nhả tạ chậm rãi.",
@@ -3331,7 +3331,7 @@ export const EXERCISE_CATALOG: (ExerciseItem & {
       "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Bent_Over_Two-Dumbbell_Row/0.jpg",
       "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Bent_Over_Two-Dumbbell_Row/1.jpg"
     ],
-    "videoEmbedId": "roCP6wCXPqo",
+    "videoEmbedId": "2ByilQ4NaAs",
     "videoQuery": "chest supported incline dumbbell row form",
     "setup": "Chỉnh ghế dốc 30-45 độ. Nằm úp ngực tì vào tựa ghế, hai tay buông thõng cầm 2 quả tạ đơn.",
     "execution": "Hít sâu, kéo hai cùi chỏ lên cao về phía sau hông, ép chặt hai bả vai vào nhau ở đỉnh. Hạ tạ từ từ kéo giãn lưng.",
@@ -3370,7 +3370,7 @@ export const EXERCISE_CATALOG: (ExerciseItem & {
       "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Dumbbell_Shrug/0.jpg",
       "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Dumbbell_Shrug/1.jpg"
     ],
-    "videoEmbedId": "g6qbq491z98",
+    "videoEmbedId": "rFsSeClGnNA",
     "videoQuery": "how to dumbbell shrug form traps",
     "setup": "Đứng thẳng người, chân rộng bằng vai, hai tay cầm hai quả tạ đơn nặng để sát hai bên đùi.",
     "execution": "Nhấc hai bả vai thẳng đứng lên cao nhất có thể, giữ 1 giây rồi hạ tạ xuống kéo dãn cơ cầu vai hoàn toàn.",
@@ -3458,7 +3458,7 @@ export const EXERCISE_CATALOG: (ExerciseItem & {
       "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Rope_Straight-Arm_Pulldown/0.jpg",
       "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Rope_Straight-Arm_Pulldown/1.jpg"
     ],
-    "videoEmbedId": "l_vRk6g31y4",
+    "videoEmbedId": "hAMcfubonDc",
     "videoQuery": "rope straight arm pulldown lats form",
     "setup": "Lắp dây thừng vào ròng rọc cáp cao. Lùi ra 1 bước, hơi gập hông 30 độ, hai cánh tay duỗi thẳng giữ khuỷu tay hơi chùng.",
     "execution": "Dùng cơ xô kéo dây thừng từ trên cao xuống đùi, khi chạm đùi tách rộng hai đầu dây thừng ra sau hông để siết xô tối đa.",
@@ -3958,7 +3958,7 @@ export const EXERCISE_CATALOG: (ExerciseItem & {
       "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Spider_Curl/0.jpg",
       "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Spider_Curl/1.jpg"
     ],
-    "videoEmbedId": "ke2afkptk7M",
+    "videoEmbedId": "ivS3G35bapw",
     "videoQuery": "spider curl form dumbbell ez bar",
     "setup": "Nằm úp ngực lên phần dốc đứng của ghế tập (khoảng 45 độ). Hai cánh tay buông thõng vuông góc với sàn, cầm đòn tạ EZ.",
     "execution": "Cố định cùi chỏ, cuốn tạ lên phía cằm, siết chặt bắp tay trước ở đỉnh trong 1-2 giây rồi hạ từ từ.",
@@ -4107,7 +4107,7 @@ export const EXERCISE_CATALOG: (ExerciseItem & {
       "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Palms-Up_Barbell_Wrist_Curl_Over_A_Bench/0.jpg",
       "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Palms-Up_Barbell_Wrist_Curl_Over_A_Bench/1.jpg"
     ],
-    "videoEmbedId": "3VdcG1o_8d8",
+    "videoEmbedId": "IG8dV1Ii1nY",
     "videoQuery": "barbell wrist curl forearms form",
     "setup": "Quỳ trước ghế phẳng, đặt hai cẳng tay lên mặt ghế sao cho cổ tay nhô ra ngoài mép ghế, lòng bàn tay ngửa lên cầm thanh đòn.",
     "execution": "Hạ cổ tay cho thanh đòn lăn nhẹ xuống ngón tay, sau đó cuộn các ngón tay và gập mạnh cổ tay lên cao nhất có thể.",
@@ -4146,7 +4146,7 @@ export const EXERCISE_CATALOG: (ExerciseItem & {
       "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Cable_One_Arm_Tricep_Extension/0.jpg",
       "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Cable_One_Arm_Tricep_Extension/1.jpg"
     ],
-    "videoEmbedId": "_Gs0t8zK-8A",
+    "videoEmbedId": "7lYeoKRXO-0",
     "videoQuery": "single arm cable tricep extension form",
     "setup": "Đứng bên cạnh khung cáp, ròng rọc ở vị trí cao nhất. Nắm quả cầu cáp hoặc quai cầm đơn, cùi chỏ áp sát sườn.",
     "execution": "Giữ bắp tay trên bất động, duỗi cẳng tay thẳng xuống dưới và hơi chéo ra ngoài, siết cứng cơ tay sau 1 giây rồi nhả lên.",
@@ -4185,7 +4185,7 @@ export const EXERCISE_CATALOG: (ExerciseItem & {
       "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Tate_Press/0.jpg",
       "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Tate_Press/1.jpg"
     ],
-    "videoEmbedId": "VfP_v7P2X4Y",
+    "videoEmbedId": "cZJ-4Ll3uAo",
     "videoQuery": "how to tate press dumbbell form triceps",
     "setup": "Nằm ngửa trên ghế phẳng, cầm 2 quả tạ đơn duỗi thẳng phía trên ngực, hai quả tạ chạm nhẹ vào nhau.",
     "execution": "Gập cùi chỏ mở rộng sang hai bên, hạ đầu trong của 2 quả tạ xuống chạm nhẹ ngực giữa. Dùng lực tay sau duỗi tạ thẳng lên lại.",
@@ -4273,7 +4273,7 @@ export const EXERCISE_CATALOG: (ExerciseItem & {
       "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Pushups/0.jpg",
       "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Pushups/1.jpg"
     ],
-    "videoEmbedId": "_4EGPVkgt4o",
+    "videoEmbedId": "PPTj-MW2tcs",
     "videoQuery": "how to diamond push up properly form",
     "setup": "Tư thế hít đất tiêu chuẩn, hai bàn tay đặt sát nhau sao cho ngón cái và ngón trỏ tạo thành hình kim cương ngay dưới ngực.",
     "execution": "Gồng chặt cơ bụng mông, hạ ngực xuống sát bàn tay có kiểm soát, sau đó nhấn mạnh lòng bàn tay đẩy thẳng người lên.",
@@ -4487,7 +4487,7 @@ export const EXERCISE_CATALOG: (ExerciseItem & {
       "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Band_Good_Morning_(Pull_Through)/0.jpg",
       "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Band_Good_Morning_(Pull_Through)/1.jpg"
     ],
-    "videoEmbedId": "A8nFz4pewQ8",
+    "videoEmbedId": "v_L0e-SntSU",
     "videoQuery": "cable pull through form for glutes",
     "setup": "Lắp dây thừng vào ròng rọc thấp. Đứng quay lưng lại cột cáp, chân rộng bằng vai, luồn hai đầu dây thừng qua giữa hai chân.",
     "execution": "Gập hông đẩy mông ra sau trong khi lưng giữ thẳng. Khi cơ đùi sau căng hết cỡ, đẩy mạnh hông về trước và khóa cơ mông ở đỉnh.",
@@ -4519,7 +4519,7 @@ export const EXERCISE_CATALOG: (ExerciseItem & {
       "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Thigh_Abductor/0.jpg",
       "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Thigh_Abductor/1.jpg"
     ],
-    "videoEmbedId": "N_VwG9zF9nI",
+    "videoEmbedId": "tu4o4quPv2k",
     "videoQuery": "seated hip abduction machine form glutes",
     "setup": "Ngồi vào máy banh đùi, đặt hai đầu gối vào phía trong của hai đệm tì. Bàn chân đặt trên giá đỡ.",
     "execution": "Dùng cơ mông mở rộng hai đùi ra ngoài tối đa, giữ lại 1-2 giây ở vị trí mở rộng nhất rồi khép lại từ từ có kiểm soát.",
@@ -4558,7 +4558,7 @@ export const EXERCISE_CATALOG: (ExerciseItem & {
       "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Thigh_Adductor/0.jpg",
       "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Thigh_Adductor/1.jpg"
     ],
-    "videoEmbedId": "4o3kGqF1qGE",
+    "videoEmbedId": "BmMmt-c9aNM",
     "videoQuery": "seated hip adduction machine inner thigh form",
     "setup": "Ngồi vào máy khép đùi, điều chỉnh chốt mở hai chân rộng ra hai bên. Đặt mặt trong gối vào hai miếng đệm.",
     "execution": "Gồng cơ đùi trong, khép hai chân lại về giữa cho đến khi hai đệm chạm nhẹ vào nhau. Nhả từ từ ra ngoài.",
@@ -4834,7 +4834,7 @@ export const EXERCISE_CATALOG: (ExerciseItem & {
       "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Ab_Roller/0.jpg",
       "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Ab_Roller/1.jpg"
     ],
-    "videoEmbedId": "rqiTPdK1cWk",
+    "videoEmbedId": "MinlHnG7j4k",
     "videoQuery": "how to ab wheel rollout properly form",
     "setup": "Quỳ hai đầu gối trên thảm, hai tay nắm hai đầu của con lăn bụng đặt ngay phía trước đầu gối.",
     "execution": "Hít sâu gồng chặt bụng, từ từ lăn con lăn về phía trước cho đến khi thân người duỗi thẳng gần chạm sàn. Dùng cơ bụng cuộn kéo người về lại.",

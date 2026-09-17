@@ -1,6 +1,6 @@
 import { isExerciseSpineSafe, HERNIATED_DISC_EXCLUDED_IDS, SPINE_SAFETY_REASONS, SPINE_SAFE_ALTERNATIVES } from '../data/spineSafety';
-import React, { useState } from 'react';
-import { Play, Dumbbell, Clock, Layers, Sparkles, RefreshCw, ChevronRight, Info, Video, Eye, ArrowUp, ArrowDown, Flame, Target, Plus, Minus, Edit3 , Shield, ShieldAlert, AlertTriangle, Star, Ban } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { Play, Dumbbell, Clock, Layers, Sparkles, RefreshCw, ChevronRight, Info, Video, Eye, ArrowUp, ArrowDown, Flame, Target, Plus, Minus, Edit3 , Shield, ShieldAlert, AlertTriangle, Star, Ban, GripVertical } from 'lucide-react';
 import { WorkoutPlan, PlannedExercise, CardioType, ExerciseItem, MuscleGroup, EquipmentPreference, UserBodyProfile } from '../types';
 import { MUSCLES_INFO } from '../data/exerciseCatalog';
 import { PlateCalculatorModal } from './PlateCalculatorModal';
@@ -76,6 +76,54 @@ export const WorkoutTab: React.FC<WorkoutTabProps> = ({
   const [swapTargetIndex, setSwapTargetIndex] = useState<number | null>(null);
   const [showTargetMusclesModal, setShowTargetMusclesModal] = useState<boolean>(false);
   const [editingExerciseIndex, setEditingExerciseIndex] = useState<number | null>(null);
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+
+  // Touch drag support for mobile devices
+  const touchActiveIndexRef = useRef<number | null>(null);
+  const exerciseCardsRef = useRef<(HTMLDivElement | null)[]>([]);
+
+  const handleTouchStart = (e: React.TouchEvent, index: number) => {
+    touchActiveIndexRef.current = index;
+    setDraggedIndex(index);
+    if ('vibrate' in navigator) {
+      try { navigator.vibrate(25); } catch (_) {}
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (touchActiveIndexRef.current === null) return;
+    const touch = e.touches[0];
+    const clientY = touch.clientY;
+    
+    // Find exercise element directly under the touch point
+    for (let i = 0; i < exerciseCardsRef.current.length; i++) {
+      const el = exerciseCardsRef.current[i];
+      if (el) {
+        const rect = el.getBoundingClientRect();
+        if (clientY >= rect.top && clientY <= rect.bottom) {
+          if (dragOverIndex !== i) {
+            setDragOverIndex(i);
+          }
+          break;
+        }
+      }
+    }
+  };
+
+  const handleTouchEnd = () => {
+    const fromIdx = touchActiveIndexRef.current;
+    const toIdx = dragOverIndex;
+    if (fromIdx !== null && toIdx !== null && fromIdx !== toIdx && onMoveExercise) {
+      onMoveExercise(fromIdx, toIdx);
+      if ('vibrate' in navigator) {
+        try { navigator.vibrate([15, 30, 15]); } catch (_) {}
+      }
+    }
+    touchActiveIndexRef.current = null;
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
 
   const handleQuickAdjustWeight = (exerciseIndex: number, delta: number) => {
     if (!onUpdateExercise) return;
@@ -464,14 +512,150 @@ export const WorkoutTab: React.FC<WorkoutTabProps> = ({
             const firstSet = ex.sets[0];
             const hasThumbnail = ex.images && ex.images.length > 0;
             const isFavorite = exercisePreferences?.[ex.exerciseId] === 'favorite';
+            const isDraggingThis = draggedIndex === idx;
+            const isOverThis = dragOverIndex === idx && draggedIndex !== idx;
 
             return (
               <div
                 key={ex.exerciseId}
-                className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-sm hover:border-slate-300 transition"
+                ref={(el) => (exerciseCardsRef.current[idx] = el)}
+                draggable={Boolean(onMoveExercise)}
+                onDragStart={(e) => {
+                  setDraggedIndex(idx);
+                  e.dataTransfer.effectAllowed = 'move';
+                  e.dataTransfer.setData('text/plain', String(idx));
+                }}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.dataTransfer.dropEffect = 'move';
+                  if (dragOverIndex !== idx) setDragOverIndex(idx);
+                }}
+                onDragLeave={() => {
+                  if (dragOverIndex === idx) setDragOverIndex(null);
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  if (draggedIndex !== null && draggedIndex !== idx && onMoveExercise) {
+                    onMoveExercise(draggedIndex, idx);
+                  }
+                  setDraggedIndex(null);
+                  setDragOverIndex(null);
+                }}
+                onDragEnd={() => {
+                  setDraggedIndex(null);
+                  setDragOverIndex(null);
+                }}
+                className={`bg-white rounded-3xl p-4 border transition duration-200 ${
+                  isDraggingThis 
+                    ? 'opacity-50 scale-[0.98] border-blue-500 shadow-xl ring-2 ring-blue-400/40' 
+                    : isOverThis 
+                      ? 'border-blue-500 border-t-4 bg-blue-50/40 shadow-md' 
+                      : 'border-slate-200/80 shadow-sm hover:border-slate-300'
+                }`}
               >
+                {/* 1. Header Bar (Full width): Drag handle + Badge + Quick Actions */}
+                <div className="flex items-center justify-between gap-2 pb-2.5 mb-2.5 border-b border-slate-100">
+                  {/* Left: Drag Handle + Badge Bài X • Tier Y + Ưu Tiên */}
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {onMoveExercise && (
+                      <div
+                        onTouchStart={(e) => handleTouchStart(e, idx)}
+                        onTouchMove={handleTouchMove}
+                        onTouchEnd={handleTouchEnd}
+                        className="p-1 -ml-1 text-slate-400 hover:text-blue-600 active:text-blue-700 cursor-grab active:cursor-grabbing touch-none select-none rounded-lg hover:bg-slate-100 transition"
+                        title="Chạm và kéo để đổi thứ tự bài tập"
+                      >
+                        <GripVertical className="w-4 h-4" />
+                      </div>
+                    )}
+
+                    <span className="text-[10px] font-black uppercase px-2 py-0.5 bg-slate-100 text-slate-700 rounded-md whitespace-nowrap">
+                      Bài {idx + 1} • Tier {ex.tier}
+                    </span>
+
+                    {isFavorite && (
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-amber-50 border border-amber-200 text-amber-800 text-[10px] font-black rounded-md whitespace-nowrap shadow-2xs">
+                        <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-500" />
+                        <span>Ưu Tiên</span>
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Right: Equipment calc & Actions */}
+                  <div className="flex items-center gap-1 shrink-0">
+                    {ex.equipment === 'barbell' && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveCalcWeight(firstSet?.targetWeight || 60);
+                        }}
+                        className="p-1.5 bg-slate-50 text-slate-600 hover:text-blue-600 rounded-lg text-xs active:scale-95 transition"
+                        title="Mở Plate Calculator"
+                      >
+                        <Dumbbell className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                    {ex.equipment === 'cable' && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveCableExercise(ex);
+                        }}
+                        className="p-1.5 bg-purple-50 text-purple-600 hover:text-purple-800 rounded-lg text-xs border border-purple-200 active:scale-95 transition"
+                        title="Xem nấc cọc tạ cáp & tỷ lệ ròng rọc"
+                      >
+                        <Layers className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+
+                    {/* Nút Ưu Tiên ⭐ */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onTogglePreference?.(ex.exerciseId, isFavorite ? 'standard' : 'favorite');
+                      }}
+                      className={`p-1.5 rounded-xl text-xs font-black flex items-center gap-1 active:scale-95 transition border shadow-2xs ${
+                        isFavorite
+                          ? 'bg-amber-100 text-amber-900 border-amber-300'
+                          : 'bg-slate-50 text-slate-400 border-slate-200 hover:bg-amber-50 hover:text-amber-600'
+                      }`}
+                      title={isFavorite ? "Đang ưu tiên bài này • Bấm để hủy" : "Bấm để AI luôn ưu tiên bài này (⭐)"}
+                    >
+                      <Star className={`w-3.5 h-3.5 ${isFavorite ? 'fill-amber-400 text-amber-500' : ''}`} />
+                    </button>
+
+                    {/* Nút Chặn / Loại trừ 🚫 */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (window.confirm(`Sếp có chắc chắn muốn loại trừ bài "${ex.exerciseName}" khỏi danh sách tập luyện không?`)) {
+                          onTogglePreference?.(ex.exerciseId, 'exclude');
+                          onSwapExercise(idx);
+                        }
+                      }}
+                      className="p-1.5 bg-slate-50 hover:bg-rose-50 text-slate-400 hover:text-rose-600 rounded-xl text-xs font-black flex items-center gap-1 active:scale-95 transition border border-slate-200 hover:border-rose-200 shadow-2xs"
+                      title="Loại trừ 100% bài này khỏi các buổi tập (🚫)"
+                    >
+                      <Ban className="w-3.5 h-3.5 text-rose-500" />
+                    </button>
+
+                    {/* Nút Đổi bài */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSwapTargetIndex(idx);
+                      }}
+                      className="px-2 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 rounded-xl text-xs font-black flex items-center gap-1 active:scale-95 transition border border-amber-200 shadow-2xs whitespace-nowrap"
+                      title="Đổi bài tập khác cùng nhóm cơ"
+                    >
+                      <RefreshCw className="w-3 h-3 text-amber-600" />
+                      <span className="text-[11px]">Đổi bài</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* 2. Main Content Bar: Thumbnail + Title + Details */}
                 <div className="flex items-start gap-3 mb-2">
-                  
                   {/* Thumbnail with quick view badge */}
                   <div 
                     onClick={() => setSelectedExerciseForModal(ex)}
@@ -495,159 +679,72 @@ export const WorkoutTab: React.FC<WorkoutTabProps> = ({
 
                   {/* Exercise info */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 bg-slate-100 text-slate-600 rounded-md">
-                          Bài {idx + 1} • Tier {ex.tier}
-                        </span>
-                        {isFavorite && (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-50 border border-amber-200 text-amber-800 text-[10px] font-black rounded-md shadow-2xs animate-in fade-in">
-                            <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-500" />
-                            <span>Ưu Tiên ⭐</span>
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        {/* Nút Ưu Tiên ⭐ */}
+                    <div className="flex items-center justify-between gap-1.5 mb-1">
+                      <h4 
+                        onClick={() => setSelectedExerciseForModal(ex)}
+                        className="font-black text-slate-900 text-sm truncate cursor-pointer hover:text-blue-600 transition"
+                      >
+                        {ex.exerciseName}
+                      </h4>
+
+                      {onToggleMaxEffort && (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            onTogglePreference?.(ex.exerciseId, isFavorite ? 'standard' : 'favorite');
+                            onToggleMaxEffort(idx);
                           }}
-                          className={`p-1.5 rounded-xl text-xs font-black flex items-center gap-1 active:scale-95 transition border shadow-2xs ${
-                            isFavorite
-                              ? 'bg-amber-100 text-amber-900 border-amber-300'
-                              : 'bg-slate-50 text-slate-400 border-slate-200 hover:bg-amber-50 hover:text-amber-600'
+                          className={`px-2 py-0.5 rounded-lg text-[10px] font-black flex items-center gap-1 shrink-0 active:scale-95 transition border shadow-2xs whitespace-nowrap ${
+                            ex.isMaxEffort
+                              ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white border-amber-400'
+                              : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-amber-50 hover:text-amber-700'
                           }`}
-                          title={isFavorite ? "Đang ưu tiên bài này (AI luôn chọn khi cơ hồi phục) • Chạm để hủy" : "Chạm để AI luôn ưu tiên bài này (⭐)"}
+                          title={ex.isMaxEffort ? "Đang là bài thử thách Max Effort hôm nay" : "Bấm để biến bài này thành bài thử thách Max Effort"}
                         >
-                          <Star className={`w-3.5 h-3.5 ${isFavorite ? 'fill-amber-400 text-amber-500' : ''}`} />
+                          <Flame className={`w-3 h-3 ${ex.isMaxEffort ? 'fill-white text-white' : 'text-amber-500'}`} />
+                          <span>{ex.isMaxEffort ? 'Max Effort' : 'Thử thách'}</span>
                         </button>
-
-                        {/* Nút Chặn / Loại trừ 🚫 */}
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (window.confirm(`Sếp có chắc chắn muốn loại trừ bài "${ex.exerciseName}" khỏi danh sách tập luyện không?`)) {
-                              onTogglePreference?.(ex.exerciseId, 'exclude');
-                              onSwapExercise(idx);
-                            }
-                          }}
-                          className="p-1.5 bg-slate-50 hover:bg-rose-50 text-slate-400 hover:text-rose-600 rounded-xl text-xs font-black flex items-center gap-1 active:scale-95 transition border border-slate-200 hover:border-rose-200 shadow-2xs"
-                          title="Loại trừ 100% bài này khỏi các buổi tập (🚫)"
-                        >
-                          <Ban className="w-3.5 h-3.5 text-rose-500" />
-                        </button>
-
-                        {onMoveExercise && (
-                          <>
-                            <button
-                              disabled={idx === 0}
-                              onClick={() => onMoveExercise(idx, idx - 1)}
-                              className="p-1.5 bg-slate-50 hover:bg-slate-200 text-slate-600 rounded-lg text-xs disabled:opacity-30 active:scale-95 transition"
-                              title="Đẩy lên trước"
-                            >
-                              <ArrowUp className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              disabled={idx === workout.exercises.length - 1}
-                              onClick={() => onMoveExercise(idx, idx + 1)}
-                              className="p-1.5 bg-slate-50 hover:bg-slate-200 text-slate-600 rounded-lg text-xs disabled:opacity-30 active:scale-95 transition"
-                              title="Đẩy xuống sau"
-                            >
-                              <ArrowDown className="w-3.5 h-3.5" />
-                            </button>
-                          </>
-                        )}
-                        {ex.equipment === 'barbell' && (
-                          <button
-                            onClick={() => setActiveCalcWeight(firstSet?.targetWeight || 60)}
-                            className="p-1.5 bg-slate-50 text-slate-600 hover:text-blue-600 rounded-lg text-xs"
-                            title="Mở Plate Calculator"
-                          >
-                            <Dumbbell className="w-4 h-4" />
-                          </button>
-                        )}
-                        {ex.equipment === 'cable' && (
-                          <button
-                            onClick={() => setActiveCableExercise(ex)}
-                            className="p-1.5 bg-purple-50 text-purple-600 hover:text-purple-800 rounded-lg text-xs border border-purple-200"
-                            title="Xem nấc cọc tạ cáp & tỷ lệ ròng rọc"
-                          >
-                            <Layers className="w-4 h-4" />
-                          </button>
-                        )}
-                        {onToggleMaxEffort && (
-                          <button
-                            onClick={() => onToggleMaxEffort(idx)}
-                            className={`px-2 py-1 rounded-xl text-xs font-black flex items-center gap-1 active:scale-95 transition border shadow-2xs ${
-                              ex.isMaxEffort
-                                ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white border-amber-400'
-                                : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-amber-50 hover:text-amber-700'
-                            }`}
-                            title={ex.isMaxEffort ? "Đang là bài thử thách Max Effort hôm nay" : "Bấm để biến bài này thành bài thử thách Max Effort"}
-                          >
-                            <Flame className={`w-3.5 h-3.5 ${ex.isMaxEffort ? 'fill-white text-white' : 'text-amber-500'}`} />
-                            <span className="text-[11px]">{ex.isMaxEffort ? 'Max Effort' : 'Thử thách'}</span>
-                          </button>
-                        )}
-                        <button
-                          onClick={() => setSwapTargetIndex(idx)}
-                          className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 rounded-xl text-xs font-black flex items-center gap-1 active:scale-95 transition border border-amber-200 shadow-2xs"
-                          title="Đổi bài tập khác cùng nhóm cơ"
-                        >
-                          <RefreshCw className="w-3.5 h-3.5 text-amber-600" />
-                          <span>Đổi bài</span>
-                        </button>
-                      </div>
+                      )}
                     </div>
 
                     {ex.isMaxEffort && (
-                      <div className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 text-white text-[10px] font-black rounded-lg shadow-xs mb-1 mt-0.5">
-                        <Flame className="w-3 h-3 fill-white text-white" />
-                        <span>MAX EFFORT DAY • HIỆP CUỐI HẾT SỨC (AMRAP)</span>
+                      <div className="inline-flex items-center gap-1 px-2 py-0.5 bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 text-white text-[9px] font-black rounded-md shadow-2xs mb-1">
+                        <Flame className="w-2.5 h-2.5 fill-white text-white" />
+                        <span>MAX EFFORT • HIỆP CUỐI AMRAP</span>
                       </div>
                     )}
 
-                    <h4 
-                      onClick={() => setSelectedExerciseForModal(ex)}
-                      className="font-extrabold text-slate-900 text-sm mt-1 truncate cursor-pointer hover:text-blue-600 transition"
-                    >
-                      {ex.exerciseName}
-                    </h4>
-
-                    <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+                    {/* Badges: Spine safety, Muscle target */}
+                    <div className="flex items-center gap-1.5 flex-wrap">
                       {isExerciseSpineSafe(ex.exerciseId) ? (
-                        <span className="inline-flex items-center gap-1 text-[9px] font-black text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200/90 shadow-2xs">
+                        <span className="inline-flex items-center gap-1 text-[9px] font-black text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200/90 shadow-2xs whitespace-nowrap">
                           <Shield className="w-2.5 h-2.5 text-emerald-600" />
                           <span>An toàn đĩa đệm</span>
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 text-[9px] font-black text-rose-800 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-300 shadow-2xs">
+                        <span className="inline-flex items-center gap-1 text-[9px] font-black text-rose-800 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-300 shadow-2xs whitespace-nowrap">
                           <AlertTriangle className="w-2.5 h-2.5 text-rose-600" />
-                          <span>Nén cột sống (Thoát vị)</span>
+                          <span>Nén cột sống</span>
                         </span>
                       )}
-                    </div>
 
-                    <div className="flex items-center gap-1.5 flex-wrap mt-1">
                       {ex.muscleTarget ? (
                         <span 
                           onClick={(e) => {
                             e.stopPropagation();
                             setSelectedExerciseForModal(ex);
                           }}
-                          className="inline-flex items-center gap-1 text-[10px] font-black text-rose-600 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200 cursor-pointer hover:bg-rose-100 transition"
+                          className="inline-flex items-center gap-1 text-[10px] font-black text-rose-600 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200 cursor-pointer hover:bg-rose-100 transition whitespace-nowrap"
                           title="Bấm để xem hình giải phẫu điểm phát lực và mẹo cảm nhận cơ"
                         >
                           <Target className="w-3 h-3 shrink-0" />
-                          <span className="truncate">{ex.muscleTarget.primaryHeadNameVi}</span>
+                          <span className="truncate max-w-[140px]">{ex.muscleTarget.primaryHeadNameVi}</span>
                         </span>
                       ) : (
                         <span className="text-[11px] font-semibold text-blue-600 truncate">
                           {ex.primaryMuscles.join(', ')}
                         </span>
                       )}
+
                       <span className="text-slate-300">•</span>
                       {ex.equipment === 'cable' ? (
                         <span 
@@ -655,13 +752,13 @@ export const WorkoutTab: React.FC<WorkoutTabProps> = ({
                             e.stopPropagation();
                             setActiveCableExercise(ex);
                           }}
-                          className="text-[10px] font-bold text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded border border-purple-200 cursor-pointer hover:bg-purple-100"
+                          className="text-[10px] font-bold text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded border border-purple-200 cursor-pointer hover:bg-purple-100 whitespace-nowrap"
                           title="Bấm để chỉnh nấc cọc tạ cáp & tỷ lệ ròng rọc"
                         >
                           Cáp {ex.cableConfig?.pulleyRatio || '2:1'}
                         </span>
                       ) : (
-                        <span className="text-[11px] text-slate-400 font-medium capitalize">
+                        <span className="text-[11px] text-slate-400 font-medium capitalize whitespace-nowrap">
                           {ex.equipment}
                         </span>
                       )}

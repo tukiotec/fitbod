@@ -69,6 +69,46 @@ export const ExerciseDetailModal: React.FC<ExerciseDetailModalProps> = ({
   const [currentFrame, setCurrentFrame] = useState<number>(0);
   const [isVideoLoading, setIsVideoLoading] = useState<boolean>(true);
   const [videoError, setVideoError] = useState<boolean>(false);
+  const [youtubeError, setYoutubeError] = useState<boolean>(false);
+  const [fallbackToast, setFallbackToast] = useState<string | null>(null);
+
+  // Reset states khi đổi bài tập
+  useEffect(() => {
+    setYoutubeError(false);
+    setFallbackToast(null);
+  }, [exercise.exerciseId, activeVideoEmbedId]);
+
+  const handleYoutubeError = () => {
+    setYoutubeError(true);
+    if (hasLoopVideo) {
+      setFallbackToast('Video YouTube hạn chế nhúng • Đã chuyển sang Video Loop 1080p');
+      setActiveMediaTab('loop');
+    } else if (hasImages) {
+      setFallbackToast('Video YouTube hạn chế nhúng • Đã chuyển sang Ảnh động 2 thì');
+      setActiveMediaTab('animation');
+    } else {
+      setFallbackToast('Video YouTube hạn chế nhúng • Đã chuyển sang Sơ đồ giải phẫu');
+      setActiveMediaTab('anatomy');
+    }
+  };
+
+  // Lắng nghe thông điệp onError từ YouTube IFrame Player API (postMessage enablejsapi=1)
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      try {
+        let data = event.data;
+        if (typeof data === 'string') {
+          data = JSON.parse(data);
+        }
+        if (data && (data.event === 'onError' || (data.info && typeof data.info === 'number' && data.event?.includes('Error')))) {
+          handleYoutubeError();
+        }
+      } catch (_) {}
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [hasLoopVideo, hasImages]);
 
   // Auto-looping 2 pha tĩnh (Setup vs Lockout)
   useEffect(() => {
@@ -286,11 +326,23 @@ export const ExerciseDetailModal: React.FC<ExerciseDetailModalProps> = ({
               <div className="w-full h-72 bg-black flex items-center justify-center relative overflow-hidden">
                 <iframe
                   className="w-full h-full border-0"
-                  src={`https://www.youtube-nocookie.com/embed/${activeVideoEmbedId}?autoplay=1&mute=1&loop=1&playlist=${activeVideoEmbedId}&playsinline=1&controls=1&rel=0`}
+                  src={`https://www.youtube.com/embed/${activeVideoEmbedId}?autoplay=1&mute=1&loop=1&playlist=${activeVideoEmbedId}&playsinline=1&controls=1&rel=0`}
                   title={exercise.exerciseName}
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                   allowFullScreen
                 />
+                <div className="absolute top-2.5 right-2.5 z-10 pointer-events-auto">
+                  <a
+                    href={`https://www.youtube.com/watch?v=${activeVideoEmbedId}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 px-2.5 py-1 bg-black/75 hover:bg-red-600 backdrop-blur-md text-white rounded-xl text-[10px] font-black border border-white/20 shadow-md transition active:scale-95"
+                    title="Mở trực tiếp trên ứng dụng YouTube"
+                  >
+                    <Video className="w-3 h-3 text-red-400" />
+                    <span>Mở YouTube App ↗</span>
+                  </a>
+                </div>
               </div>
             )}
 
