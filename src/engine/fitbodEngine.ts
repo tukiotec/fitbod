@@ -444,44 +444,78 @@ export function calculateCompletedWorkoutFatigue(
       }
 
       const rawIntensity = (loadRatio * 0.6) + (rirFactor * 0.4);
-      const intensity = Math.min(1.0, Math.max(0.0, (rawIntensity - 0.6) / 0.4));
+      const intensity = Math.min(1.0, Math.max(0.0, (rawIntensity - 0.55) / 0.45));
 
       // 2. Độ mỏi cơ sở cho nhóm cơ chính (Base Primary Fatigue)
+      // Working set: 8.0% -> 9.8% (~6.5% - 9.5% chuẩn Fitbod)
       let basePrimaryFatigue: number;
       if (isWarmup) {
-        basePrimaryFatigue = 1.5 + (intensity * 1.5); // 1.5% -> 3.0%
+        basePrimaryFatigue = 2.0 + (intensity * 1.0); // 2.0% -> 3.0%
       } else {
-        basePrimaryFatigue = 7.5 + (intensity * 3.0); // 7.5% -> 10.5%
+        basePrimaryFatigue = 8.0 + (intensity * 1.8); // 8.0% -> 9.8%
         if (isAmrap) {
-          basePrimaryFatigue += 5.5; // AMRAP / Max Effort tăng thêm +5.5%
+          basePrimaryFatigue += 5.0; // AMRAP / Max Effort tăng thêm +5.0%
         }
       }
 
+      // Xác định động tác kéo lưng (Vertical/Horizontal Pull) để kích hoạt đồng vận lưng xô & lưng trên
+      const isBackPull = catalogItem.movementPattern === 'vertical_pull' || 
+                         catalogItem.movementPattern === 'horizontal_pull' ||
+                         catalogItem.primaryMuscles.some(pm => pm.muscle === 'lats' || pm.muscle === 'upper_back');
+
       // 3. Phân bổ cho nhóm cơ chính (Primary Muscles):
-      // Nhóm cơ chính chủ lực của bài luôn nhận trọn vẹn 7.5% - 10.5%
-      const maxPmRatio = Math.max(...catalogItem.primaryMuscles.map(p => p.ratio), 1.0);
+      // Nhóm cơ chính chủ lực của bài nhận trọn vẹn độ mỏi cơ sở
       catalogItem.primaryMuscles.forEach(pm => {
-        const muscleWeight = maxPmRatio > 0 ? Math.max(0.90, pm.ratio / maxPmRatio) : 1.0;
-        fatigue[pm.muscle] = (fatigue[pm.muscle] || 0) + (basePrimaryFatigue * muscleWeight);
+        fatigue[pm.muscle] = (fatigue[pm.muscle] || 0) + basePrimaryFatigue;
       });
 
       // 4. Phân bổ cho nhóm cơ phụ (Secondary Muscles):
-      // Nhận 50% - 70% độ mỏi của nhóm cơ chính trong các động tác Compound kéo/đẩy
       if (catalogItem.secondaryMuscles && catalogItem.secondaryMuscles.length > 0) {
-        const maxSmRatio = Math.max(...catalogItem.secondaryMuscles.map(s => s.ratio), 1.0);
+        const maxSmRatio = Math.max(...catalogItem.secondaryMuscles.map(s => s.ratio));
         catalogItem.secondaryMuscles.forEach(sm => {
           const smRelativeRatio = maxSmRatio > 0 ? (sm.ratio / maxSmRatio) : 1.0;
-          const secondaryFactor = 0.50 + (0.20 * smRelativeRatio); // 50% -> 70%
+          let secondaryFactor: number;
+          if (isBackPull && (sm.muscle === 'lats' || sm.muscle === 'upper_back')) {
+            // Hiệp đồng kéo lưng (Back Synergy): Lats <-> Upper Back đồng vận nhận 70% - 85% tải
+            secondaryFactor = 0.70 + (0.15 * smRelativeRatio);
+          } else {
+            // Cơ phụ chuẩn (như tay trước trong bài kéo, tay sau trong bài đẩy): 35% - 50%
+            secondaryFactor = 0.35 + (0.15 * smRelativeRatio);
+          }
           const smFatigue = basePrimaryFatigue * secondaryFactor;
           fatigue[sm.muscle] = (fatigue[sm.muscle] || 0) + smFatigue;
         });
+      }
+
+      // 5. Đồng vận cơ lưng bổ sung (Nếu bài kéo lưng chưa liệt kê cơ kia trong secondary)
+      if (isBackPull) {
+        const hasLats = catalogItem.primaryMuscles.some(pm => pm.muscle === 'lats') || 
+                        catalogItem.secondaryMuscles?.some(sm => sm.muscle === 'lats');
+        const hasUpperBack = catalogItem.primaryMuscles.some(pm => pm.muscle === 'upper_back') || 
+                             catalogItem.secondaryMuscles?.some(sm => sm.muscle === 'upper_back');
+        if (!hasLats) {
+          fatigue['lats'] = (fatigue['lats'] || 0) + (basePrimaryFatigue * 0.75);
+        }
+        if (!hasUpperBack) {
+          fatigue['upper_back'] = (fatigue['upper_back'] || 0) + (basePrimaryFatigue * 0.70);
+        }
       }
     });
   });
 
   (Object.keys(currentRecovery) as MuscleGroup[]).forEach(m => {
-    if (fatigue[m] && fatigue[m]! > 0) {
-      updated[m] = Math.max(10, Math.round(updated[m] - fatigue[m]!));
+    const rawFatigue = fatigue[m] || 0;
+    if (rawFatigue > 0) {
+      // Chuẩn hóa đường cong mỏi cơ sinh lý học Fitbod:
+      // Dưới 70%: tăng tuyến tính theo từng hiệp
+      // Trên 70%: độ dốc giảm dần (diminishing returns) và chạm trần 82% - 85%
+      // Đảm bảo sau buổi tập nặng, Recovery rơi chuẩn xác vào vùng 15% - 30% màu cam/đỏ
+      let effectiveFatigue = rawFatigue;
+      if (rawFatigue > 70) {
+        effectiveFatigue = 70 + Math.min(15, (rawFatigue - 70) * 0.5);
+      }
+      effectiveFatigue = Math.min(85, Math.max(0, effectiveFatigue));
+      updated[m] = Math.max(15, Math.round(updated[m] - effectiveFatigue));
     }
   });
 

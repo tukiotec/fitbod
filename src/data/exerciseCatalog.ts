@@ -856,13 +856,13 @@ export const EXERCISE_CATALOG: (ExerciseItem & {
       {
         "muscle": "upper_back",
         "ratio": 0.5
+      },
+      {
+        "muscle": "lats",
+        "ratio": 0.45
       }
     ],
     "secondaryMuscles": [
-      {
-        "muscle": "lats",
-        "ratio": 0.3
-      },
       {
         "muscle": "biceps",
         "ratio": 0.2
