@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Play, Minimize2, Bell, Smartphone, ShieldCheck, Vibrate, Volume1, Volume2 } from 'lucide-react';
+import { Play, Pause, SkipForward, Minimize2, Bell, Smartphone, ShieldCheck, Vibrate, Volume1, Volume2 } from 'lucide-react';
 import { 
   requestNotificationPermission, 
   checkNotificationGranted,
@@ -23,6 +23,8 @@ interface RestTimerOverlayProps {
   onAdjustTime: (deltaSeconds: number) => void;
   onClose: () => void;
   onSkip: () => void;
+  isPaused?: boolean;
+  onTogglePause?: () => void;
 }
 
 export const RestTimerOverlay: React.FC<RestTimerOverlayProps> = ({
@@ -31,7 +33,9 @@ export const RestTimerOverlay: React.FC<RestTimerOverlayProps> = ({
   nextSetInfo,
   onAdjustTime,
   onClose,
-  onSkip
+  onSkip,
+  isPaused = false,
+  onTogglePause
 }) => {
   const [hasNotification, setHasNotification] = useState<boolean>(false);
   const [alertMode, setAlertModeState] = useState<RestAlertMode>(() => getRestAlertMode());
@@ -199,34 +203,72 @@ export const RestTimerOverlay: React.FC<RestTimerOverlayProps> = ({
 
           {/* Clock numbers inside */}
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-            <span className="text-6xl font-black tracking-tighter text-slate-900 font-mono drop-shadow-xs">
+            <span className={`text-6xl font-black tracking-tighter font-mono drop-shadow-xs transition-colors ${
+              isPaused ? 'text-amber-600 animate-pulse' : 'text-slate-900'
+            }`}>
               {timeFormatted}
             </span>
-            <span className="text-xs font-black text-blue-600 uppercase tracking-widest mt-1">
-              {remainingSeconds <= 5 
-                ? (alertMode === 'vibrate' ? '📳 CHUẨN BỊ RUNG VÀO HIỆP!' : '🔔 SẴN SÀNG VÀO HIỆP!') 
-                : 'Đang hồi phục năng lượng'}
-            </span>
+            {isPaused ? (
+              <span className="text-[11px] font-black text-amber-700 bg-amber-100 border border-amber-300 px-3 py-1 rounded-full uppercase tracking-wider mt-1.5 inline-flex items-center gap-1 shadow-xs animate-pulse">
+                <Pause className="w-3 h-3 fill-current" />
+                BỘ CHỜ TẠM DỪNG
+              </span>
+            ) : (
+              <span className="text-xs font-black text-blue-600 uppercase tracking-widest mt-1">
+                {remainingSeconds <= 5 
+                  ? (alertMode === 'vibrate' ? '📳 CHUẨN BỊ RUNG VÀO HIỆP!' : '🔔 SẴN SÀNG VÀO HIỆP!') 
+                  : 'Đang hồi phục năng lượng'}
+              </span>
+            )}
           </div>
         </div>
 
-        {/* Quick Adjustment Steppers */}
-        <div className="flex items-center gap-3 mt-4">
+        {/* Quick Adjustment Steppers & Pause/Resume "Bộ Chờ" */}
+        <div className="flex items-center justify-center gap-2 mt-4 flex-wrap">
           <button
             onClick={() => onAdjustTime(-15)}
-            className="px-4 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-2xl text-xs font-bold active:scale-95 transition text-slate-700 shadow-xs"
+            className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-2xl text-xs font-bold active:scale-95 transition text-slate-700 shadow-xs"
           >
             -15s
           </button>
+
+          {/* Nút Bộ Chờ (Tạm Dừng / Tiếp Tục) */}
+          {onTogglePause && (
+            <button
+              onClick={() => {
+                onTogglePause();
+                triggerDeviceVibration();
+              }}
+              className={`px-4 py-2 rounded-2xl text-xs font-black active:scale-95 transition shadow-xs flex items-center gap-1.5 ${
+                isPaused 
+                  ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-500/25 animate-pulse' 
+                  : 'bg-amber-100 hover:bg-amber-200 text-amber-800 border border-amber-300'
+              }`}
+              title={isPaused ? 'Tiếp tục đếm giờ' : 'Tạm dừng bộ chờ'}
+            >
+              {isPaused ? (
+                <>
+                  <Play className="w-3.5 h-3.5 fill-current" />
+                  <span>Tiếp tục đếm</span>
+                </>
+              ) : (
+                <>
+                  <Pause className="w-3.5 h-3.5 fill-current" />
+                  <span>Bộ chờ (Tạm dừng)</span>
+                </>
+              )}
+            </button>
+          )}
+
           <button
             onClick={() => onAdjustTime(30)}
-            className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-xs font-black active:scale-95 transition shadow-md shadow-blue-500/20"
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-xs font-black active:scale-95 transition shadow-md shadow-blue-500/20"
           >
             +30s
           </button>
           <button
             onClick={() => onAdjustTime(60)}
-            className="px-4 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-2xl text-xs font-bold active:scale-95 transition text-slate-700 shadow-xs"
+            className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-2xl text-xs font-bold active:scale-95 transition text-slate-700 shadow-xs"
           >
             +60s
           </button>
@@ -272,13 +314,15 @@ export const RestTimerOverlay: React.FC<RestTimerOverlayProps> = ({
           </div>
         )}
 
-        {/* Big Action Button */}
+        {/* Big Action Button - Nút Tiếp Theo */}
         <button
           onClick={onSkip}
-          className="w-full py-4 bg-emerald-500 hover:bg-emerald-600 text-white font-black text-sm rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/25 active:scale-[0.98] transition"
+          className="w-full py-4 bg-emerald-500 hover:bg-emerald-600 text-white font-black text-sm rounded-2xl flex items-center justify-center gap-2.5 shadow-lg shadow-emerald-500/25 active:scale-[0.98] transition"
         >
-          <Play className="w-4 h-4 fill-current" />
-          {nextSetInfo?.isNextExercise ? 'SẴN SÀNG QUA BÀI TIẾP THEO' : 'TẬP TIẾP LUÔN (BỎ QUA NGHỈ)'}
+          <SkipForward className="w-5 h-5 fill-current" />
+          <span>
+            {nextSetInfo?.isNextExercise ? 'NÚT TIẾP THEO: QUA BÀI MỚI' : 'NÚT TIẾP THEO: VÀO HIỆP TIẾP THEO'}
+          </span>
         </button>
       </div>
     </div>

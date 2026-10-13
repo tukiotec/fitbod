@@ -170,6 +170,8 @@ let backgroundWorker: Worker | null = null;
 let currentTargetEpoch: number | null = null;
 let currentTotalDuration: number = 0;
 let lastReportedSec: number = -1;
+let isTimerPaused: boolean = false;
+let pausedRemainingSec: number = 0;
 
 function getRestAudio(): HTMLAudioElement {
   if (!restAudioEl) {
@@ -262,44 +264,82 @@ export function updateLockScreenMedia(
   nextExerciseName?: string,
   onSkipRest?: () => void,
   onAdd30s?: () => void,
-  mode: RestAlertMode = 'vibrate'
+  mode: RestAlertMode = 'vibrate',
+  isPaused: boolean = false
 ) {
   if (!('mediaSession' in navigator)) return;
 
   try {
     const timeStr = formatTimeDisplay(remainingSeconds);
-    const prefix = mode === 'vibrate' ? '📳' : '⏱';
-    const modeDesc = mode === 'vibrate' ? 'Rung im lặng' : (mode === 'soft' ? 'Chuông êm' : 'Chuông to');
+    const prefix = isPaused ? '⏸' : (mode === 'vibrate' ? '📳' : '⏱');
+    const statusText = isPaused ? `BỘ CHỜ (${timeStr})` : `Nghỉ: ${timeStr}`;
+    const artworkSrc = isPaused ? '/rest-paused.png' : '/rest-lockscreen.png';
 
     navigator.mediaSession.metadata = new MediaMetadata({
-      title: `${prefix} Nghỉ: ${timeStr} • FITBOD PRO`,
-      artist: nextExerciseName ? `Vào hiệp: ${nextExerciseName}` : `Hồi phục cơ (${modeDesc})`,
-      album: 'Đồng hồ đếm ngược nghỉ cơ',
+      title: `${prefix} ${statusText} • FITBOD PRO`,
+      artist: isPaused
+        ? `Đang tạm dừng • Bấm ▶ tiếp tục`
+        : (nextExerciseName ? `Hiệp tiếp: ${nextExerciseName} • [⏭ Vào hiệp]` : `Hồi phục cơ bắp • [⏸ Chờ | ⏭ Vào hiệp]`),
+      album: isPaused
+        ? 'FITBOD PRO • BỘ CHỜ TẠM DỪNG'
+        : 'FITBOD PRO REST TIMER • ⏸ CHỜ | ⏭ TIẾP THEO',
       artwork: [
+        { src: artworkSrc, sizes: '512x512', type: 'image/png' },
         { src: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
         { src: '/icon-192.png', sizes: '192x192', type: 'image/png' },
         { src: '/icon-512.png', sizes: '512x512', type: 'image/png' }
       ]
     });
-    navigator.mediaSession.playbackState = 'playing';
+    navigator.mediaSession.playbackState = isPaused ? 'paused' : 'playing';
 
     // ĐẾM GIÂY NGHỈ TRỰC TIẾP TRÊN MÀN HÌNH CHỜ BẰNG THANH THỜI GIAN THẬT
     if ('setPositionState' in navigator.mediaSession && currentTotalDuration > 0) {
       const position = Math.max(0, Math.min(currentTotalDuration, currentTotalDuration - remainingSeconds));
       navigator.mediaSession.setPositionState({
         duration: Math.max(1, currentTotalDuration),
-        playbackRate: 1,
+        playbackRate: isPaused ? 0 : 1,
         position: position
       });
     }
 
+    // 1. Nút Play (▶): Tiếp tục đếm giờ từ bộ chờ
+    navigator.mediaSession.setActionHandler('play', () => {
+      resumeBackgroundRestCountdown();
+    });
+
+    // 2. Nút Pause (⏸): Bật "Bộ chờ" - Tạm dừng đếm ngược
     navigator.mediaSession.setActionHandler('pause', () => {
+      pauseBackgroundRestCountdown();
+    });
+
+    // 3. Nút Tiếp Theo (⏭): Bỏ qua nghỉ & Vào ngay hiệp/bài tiếp theo
+    navigator.mediaSession.setActionHandler('nexttrack', () => {
       if (onSkipRest) onSkipRest();
     });
 
-    navigator.mediaSession.setActionHandler('nexttrack', () => {
+    // 4. Nút Lùi (⏮): Thêm +30s nghỉ
+    navigator.mediaSession.setActionHandler('previoustrack', () => {
       if (onAdd30s) onAdd30s();
     });
+
+    // 5. Seek Controls: Tua tiến +30s hoặc lùi -15s
+    try {
+      navigator.mediaSession.setActionHandler('seekforward', (details) => {
+        const delta = details?.seekOffset || 30;
+        adjustBackgroundRestTime(delta);
+      });
+      navigator.mediaSession.setActionHandler('seekbackward', (details) => {
+        const delta = details?.seekOffset || 15;
+        adjustBackgroundRestTime(-delta);
+      });
+    } catch (e) {}
+
+    // 6. Stop handler
+    try {
+      navigator.mediaSession.setActionHandler('stop', () => {
+        if (onSkipRest) onSkipRest();
+      });
+    } catch (e) {}
   } catch (e) {}
 }
 
@@ -447,9 +487,90 @@ export interface RestCountdownParams {
   onFinish: () => void;
   onSkipRest?: () => void;
   onAdd30s?: () => void;
+  onPauseChange?: (isPaused: boolean) => void;
 }
 
 let activeParams: RestCountdownParams | null = null;
+
+/**
+ * Tạm dừng đếm ngược nghỉ ngơi ("Bộ chờ")
+ */
+export function pauseBackgroundRestCountdown() {
+  if (isTimerPaused || !currentTargetEpoch || !activeParams) return;
+  const now = Date.now();
+  pausedRemainingSec = Math.max(0, Math.ceil((currentTargetEpoch - now) / 1000));
+  isTimerPaused = true;
+
+  if (restAudioEl) {
+    try {
+      restAudioEl.pause();
+    } catch (e) {}
+  }
+
+  cancelNativeRestNotification();
+
+  const mode = activeParams.alertMode || getRestAlertMode();
+  updateLockScreenMedia(
+    pausedRemainingSec,
+    activeParams.nextExerciseName,
+    activeParams.onSkipRest,
+    activeParams.onAdd30s,
+    mode,
+    true
+  );
+
+  if (activeParams.onPauseChange) {
+    activeParams.onPauseChange(true);
+  }
+}
+
+/**
+ * Tiếp tục đếm ngược nghỉ ngơi sau khi tạm dừng bộ chờ
+ */
+export function resumeBackgroundRestCountdown() {
+  if (!isTimerPaused || !activeParams) return;
+  const remaining = pausedRemainingSec > 0 ? pausedRemainingSec : 30;
+  const newTargetEpoch = Date.now() + remaining * 1000;
+  currentTargetEpoch = newTargetEpoch;
+  isTimerPaused = false;
+
+  if (restAudioEl) {
+    restAudioEl.play().catch(() => {});
+  }
+
+  const mode = activeParams.alertMode || getRestAlertMode();
+  scheduleNativeRestNotification(newTargetEpoch, activeParams.nextExerciseName, mode);
+
+  updateLockScreenMedia(
+    remaining,
+    activeParams.nextExerciseName,
+    activeParams.onSkipRest,
+    activeParams.onAdd30s,
+    mode,
+    false
+  );
+
+  if (activeParams.onPauseChange) {
+    activeParams.onPauseChange(false);
+  }
+}
+
+/**
+ * Đảo trạng thái Chờ / Tiếp tục (Toggle Pause / Resume)
+ */
+export function togglePauseBackgroundRestCountdown(): boolean {
+  if (isTimerPaused) {
+    resumeBackgroundRestCountdown();
+    return false;
+  } else {
+    pauseBackgroundRestCountdown();
+    return true;
+  }
+}
+
+export function getIsRestCountdownPaused(): boolean {
+  return isTimerPaused;
+}
 
 /**
  * Bắt đầu đếm ngược nghỉ ngơi
@@ -459,6 +580,8 @@ export function startBackgroundRestCountdown(params: RestCountdownParams) {
   stopBackgroundRestCountdown();
 
   activeParams = params;
+  isTimerPaused = false;
+  pausedRemainingSec = 0;
   currentTargetEpoch = params.targetEpochMs;
   const now = Date.now();
   const duration = params.restSeconds || Math.max(5, Math.ceil((params.targetEpochMs - now) / 1000));
@@ -472,14 +595,14 @@ export function startBackgroundRestCountdown(params: RestCountdownParams) {
   // 2. Đặt lịch thông báo Native iOS UNUserNotificationCenter (tự động bật màn hình, rung & báo khi ở app khác hoặc màn hình khóa)
   scheduleNativeRestNotification(params.targetEpochMs, params.nextExerciseName, mode);
 
-  // 2. Tạo Dynamic Continuous WAV Audio Blob (Phần cứng CoreAudio duy trì chạy ngầm)
+  // 3. Tạo Dynamic Continuous WAV Audio Blob (Phần cứng CoreAudio duy trì chạy ngầm)
   const blob = createRestAudioBlob(duration, mode);
   if (currentBlobUrl) {
     URL.revokeObjectURL(currentBlobUrl);
   }
   currentBlobUrl = URL.createObjectURL(blob);
 
-  // 3. Kích hoạt Audio Element ngay trong User Gesture
+  // 4. Kích hoạt Audio Element ngay trong User Gesture
   const audio = getRestAudio();
   audio.src = currentBlobUrl;
   audio.currentTime = 0;
@@ -493,18 +616,20 @@ export function startBackgroundRestCountdown(params: RestCountdownParams) {
   }
 
   audio.onended = () => {
-    handleRestComplete();
+    if (!isTimerPaused) {
+      handleRestComplete();
+    }
   };
 
   // Đồng bộ thời gian thực từ phần cứng CoreAudio
   audio.ontimeupdate = () => {
-    if (!currentTargetEpoch) return;
+    if (isTimerPaused || !currentTargetEpoch) return;
     const currentNow = Date.now();
     const rem = Math.max(0, Math.ceil((currentTargetEpoch - currentNow) / 1000));
     if (rem !== lastReportedSec) {
       lastReportedSec = rem;
       params.onTick(rem);
-      updateLockScreenMedia(rem, params.nextExerciseName, params.onSkipRest, params.onAdd30s, mode);
+      updateLockScreenMedia(rem, params.nextExerciseName, params.onSkipRest, params.onAdd30s, mode, false);
     }
   };
 
@@ -514,13 +639,13 @@ export function startBackgroundRestCountdown(params: RestCountdownParams) {
   }
 
   // 5. Đăng ký đếm lùi trên Màn hình chờ & Dynamic Island
-  updateLockScreenMedia(duration, params.nextExerciseName, params.onSkipRest, params.onAdd30s, mode);
+  updateLockScreenMedia(duration, params.nextExerciseName, params.onSkipRest, params.onAdd30s, mode, false);
 
-  // 5. Ticker Web Worker phụ trợ
+  // 6. Ticker Web Worker phụ trợ
   try {
     backgroundWorker = createTickerWorker();
     backgroundWorker.onmessage = () => {
-      if (!currentTargetEpoch) return;
+      if (isTimerPaused || !currentTargetEpoch) return;
       const currentNow = Date.now();
       const rem = Math.max(0, Math.ceil((currentTargetEpoch - currentNow) / 1000));
 
@@ -528,11 +653,11 @@ export function startBackgroundRestCountdown(params: RestCountdownParams) {
 
       if (rem !== lastReportedSec) {
         lastReportedSec = rem;
-        updateLockScreenMedia(rem, params.nextExerciseName, params.onSkipRest, params.onAdd30s, mode);
+        updateLockScreenMedia(rem, params.nextExerciseName, params.onSkipRest, params.onAdd30s, mode, false);
       }
 
       if (rem <= 0) {
-        if (audio.paused || audio.ended) {
+        if (!isTimerPaused && (audio.paused || audio.ended)) {
           handleRestComplete();
         }
       }
@@ -545,7 +670,25 @@ export function startBackgroundRestCountdown(params: RestCountdownParams) {
  * Điều chỉnh thời gian nghỉ (+30s, -15s...)
  */
 export function adjustBackgroundRestTime(deltaSeconds: number) {
-  if (!currentTargetEpoch || !activeParams) return;
+  if (!activeParams) return;
+
+  if (isTimerPaused) {
+    pausedRemainingSec = Math.max(5, pausedRemainingSec + deltaSeconds);
+    currentTotalDuration = Math.max(currentTotalDuration, pausedRemainingSec);
+    const mode = activeParams.alertMode || getRestAlertMode();
+    updateLockScreenMedia(
+      pausedRemainingSec,
+      activeParams.nextExerciseName,
+      activeParams.onSkipRest,
+      activeParams.onAdd30s,
+      mode,
+      true
+    );
+    activeParams.onTick(pausedRemainingSec);
+    return;
+  }
+
+  if (!currentTargetEpoch) return;
 
   const newEpoch = Math.max(Date.now() + 3000, currentTargetEpoch + deltaSeconds * 1000);
   currentTargetEpoch = newEpoch;
@@ -569,7 +712,7 @@ export function adjustBackgroundRestTime(deltaSeconds: number) {
     audio.currentTime = Math.min(currentTotalDuration, audio.currentTime + forwardSec);
   }
 
-  updateLockScreenMedia(newRem, activeParams.nextExerciseName, activeParams.onSkipRest, activeParams.onAdd30s, mode);
+  updateLockScreenMedia(newRem, activeParams.nextExerciseName, activeParams.onSkipRest, activeParams.onAdd30s, mode, false);
   scheduleNativeRestNotification(newEpoch, activeParams.nextExerciseName, mode);
   activeParams.onTick(newRem);
 }
@@ -594,6 +737,7 @@ function handleRestComplete() {
         artist: params?.nextExerciseName || 'Fitbod Pro',
         album: 'Fitbod Pro Rest Timer',
         artwork: [
+          { src: '/rest-lockscreen.png', sizes: '512x512', type: 'image/png' },
           { src: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }
         ]
       });
@@ -610,6 +754,8 @@ function handleRestComplete() {
  */
 export function stopBackgroundRestCountdown() {
   currentTargetEpoch = null;
+  isTimerPaused = false;
+  pausedRemainingSec = 0;
   releaseScreenWakeLock();
   cancelNativeRestNotification();
 

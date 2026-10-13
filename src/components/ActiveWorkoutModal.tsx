@@ -34,6 +34,8 @@ import {
   startBackgroundRestCountdown, 
   stopBackgroundRestCountdown, 
   adjustBackgroundRestTime,
+  togglePauseBackgroundRestCountdown,
+  getIsRestCountdownPaused,
   requestNotificationPermission,
   getRestAlertMode,
   triggerDeviceVibration
@@ -192,6 +194,7 @@ export const ActiveWorkoutModal: React.FC<ActiveWorkoutModalProps> = ({
     if (!restTargetTime) return 0;
     return Math.max(0, Math.ceil((restTargetTime - Date.now()) / 1000));
   });
+  const [isRestPaused, setIsRestPaused] = useState<boolean>(false);
 
   // Workout duration timer
   const startTimeRef = useRef<number>((() => {
@@ -351,18 +354,22 @@ export const ActiveWorkoutModal: React.FC<ActiveWorkoutModalProps> = ({
         setRestTargetTime(null);
         setRemainingRestSeconds(0);
         setShowRestOverlay(false);
+        setIsRestPaused(false);
       },
       onSkipRest: () => {
         handleSkipRest();
       },
       onAdd30s: () => {
         handleAdjustRestTime(30);
+      },
+      onPauseChange: (paused) => {
+        setIsRestPaused(paused);
       }
     });
 
-    // Cập nhật ngay khi bật màn hình / chuyển lại tab
+    // Cập nhật ngay khi bật màn hình / chuyển lại tab (chỉ khi không trong bộ chờ)
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && restTargetTime) {
+      if (document.visibilityState === 'visible' && restTargetTime && !getIsRestCountdownPaused()) {
         const rem = Math.max(0, Math.ceil((restTargetTime - Date.now()) / 1000));
         setRemainingRestSeconds(rem);
         if (rem <= 0) {
@@ -370,6 +377,7 @@ export const ActiveWorkoutModal: React.FC<ActiveWorkoutModalProps> = ({
           setRestTargetTime(null);
           setRemainingRestSeconds(0);
           setShowRestOverlay(false);
+          setIsRestPaused(false);
         }
       }
     };
@@ -394,11 +402,17 @@ export const ActiveWorkoutModal: React.FC<ActiveWorkoutModalProps> = ({
     });
   };
 
+  const handleTogglePauseRest = () => {
+    const newPaused = togglePauseBackgroundRestCountdown();
+    setIsRestPaused(newPaused);
+  };
+
   const handleSkipRest = () => {
     stopBackgroundRestCountdown();
     setRestTargetTime(null);
     setRemainingRestSeconds(0);
     setShowRestOverlay(false);
+    setIsRestPaused(false);
     if (nextSetInfo?.isNextExercise) {
       setCurrentExIndex(prev => Math.min(exercises.length - 1, prev + 1));
     }
@@ -741,12 +755,16 @@ export const ActiveWorkoutModal: React.FC<ActiveWorkoutModalProps> = ({
             setRestTargetTime(null);
             setRemainingRestSeconds(0);
             setShowRestOverlay(false);
+            setIsRestPaused(false);
           },
           onSkipRest: () => {
             handleSkipRest();
           },
           onAdd30s: () => {
             handleAdjustRestTime(30);
+          },
+          onPauseChange: (paused) => {
+            setIsRestPaused(paused);
           }
         });
 
@@ -1475,6 +1493,8 @@ export const ActiveWorkoutModal: React.FC<ActiveWorkoutModalProps> = ({
           onAdjustTime={handleAdjustRestTime}
           onClose={() => setShowRestOverlay(false)}
           onSkip={handleSkipRest}
+          isPaused={isRestPaused}
+          onTogglePause={handleTogglePauseRest}
         />
       )}
 
