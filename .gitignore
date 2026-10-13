@@ -30,3 +30,6 @@ ios/App/DerivedData/
 ios/App/.build/
 *.ipa
 *.ipa.zip
+download_latest_ipa.py
+artifact_*.zip
+artifact_temp/
