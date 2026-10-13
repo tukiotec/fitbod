@@ -1,10 +1,19 @@
-import { Capacitor } from '@capacitor/core';
-import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
+import { registerPlugin, Capacitor } from '@capacitor/core';
 import { getProfileItem, setProfileItem, getActiveProfile } from './profileStorage';
 import { FitbodRawLogEntry, FitbodCsvParseResult } from '../engine/fitbodEngine';
 
+interface NativeStoragePluginInterface {
+  writeDocumentFile(options: { name: string; content: string }): Promise<{ success: boolean; path?: string; error?: string }>;
+  readDocumentFile(options: { name: string }): Promise<{ success: boolean; content?: string; error?: string }>;
+  listDocumentFiles(): Promise<{ success: boolean; files?: string[] }>;
+  writePreference(options: { key: string; value: string }): Promise<{ success: boolean; error?: string }>;
+  readPreference(options: { key: string }): Promise<{ success: boolean; value?: string; error?: string }>;
+}
+
+export const NativeStorage = registerPlugin<NativeStoragePluginInterface>('NativeStorage');
+
 export interface StorageScanItem {
-  source: 'localStorage' | 'iOS Documents';
+  source: 'localStorage' | 'iOS Documents' | 'iOS Preferences';
   key: string;
   count: number;
   dateSample: string;
@@ -109,46 +118,46 @@ export const generateCsvContent = (rawLogs: FitbodRawLogEntry[]): string => {
 
 /**
  * Tự động đồng bộ và sao lưu ra:
- * Native iOS Documents Directory (Thư mục Tệp trên iPhone)
- * Apple đảm bảo 100% KHÔNG BAO GIỜ bị xóa khi Sideloadly cài đè file IPA mới.
+ * 1. Native iOS Documents Directory (Thư mục Tệp trên iPhone) - Apple cam kết 100% không bị xóa khi cài đè IPA
+ * 2. Native iOS Preferences (UserDefaults) - Lưu trữ ngầm ở tầng hệ thống
  */
 export const persistBackupToNative = async (): Promise<{ success: boolean; error?: string }> => {
   try {
     const backupData = collectCurrentAppData();
     const backupJson = JSON.stringify(backupData, null, 2);
 
-    // Ghi vào thư mục Documents nếu là iOS / Native
     if (Capacitor.isNativePlatform()) {
       try {
-        // 1. File sao lưu JSON đầy đủ
-        await Filesystem.writeFile({
-          path: BACKUP_FILE_NAME,
-          data: backupJson,
-          directory: Directory.Documents,
-          encoding: Encoding.UTF8
+        // 1. Ghi file backup tổng vào thư mục Documents
+        await NativeStorage.writeDocumentFile({
+          name: BACKUP_FILE_NAME,
+          content: backupJson
         });
 
-        // 2. File riêng cho danh sách hiệp tập rawLogs
+        // 2. Ghi file logs riêng
         if (backupData.rawLogs && backupData.rawLogs.length > 0) {
-          await Filesystem.writeFile({
-            path: LOGS_FILE_NAME,
-            data: JSON.stringify(backupData.rawLogs, null, 2),
-            directory: Directory.Documents,
-            encoding: Encoding.UTF8
+          await NativeStorage.writeDocumentFile({
+            name: LOGS_FILE_NAME,
+            content: JSON.stringify(backupData.rawLogs, null, 2)
           });
 
-          // 3. Ghi kèm 1 bản CSV để người dùng mở xem ngay trong app Tệp (Files)
+          // 3. Ghi file CSV để xem trong app Tệp
           const csvText = generateCsvContent(backupData.rawLogs);
-          await Filesystem.writeFile({
-            path: CSV_FILE_NAME,
-            data: csvText,
-            directory: Directory.Documents,
-            encoding: Encoding.UTF8
+          await NativeStorage.writeDocumentFile({
+            name: CSV_FILE_NAME,
+            content: csvText
           });
         }
-        console.log('[NativePersistence] Đã sao lưu thành công vào iOS Documents!');
-      } catch (fsErr) {
-        console.warn('[NativePersistence] Lỗi ghi Filesystem Documents:', fsErr);
+
+        // 4. Ghi mirror vào Preferences hệ thống
+        await NativeStorage.writePreference({
+          key: 'fitbod_backup_latest',
+          value: backupJson
+        });
+
+        console.log('[NativePersistence] Đã sao lưu thành công vào iOS Documents & Preferences!');
+      } catch (nativeErr) {
+        console.warn('[NativePersistence] Lỗi ghi Native Storage:', nativeErr);
       }
     }
 
@@ -162,7 +171,7 @@ export const persistBackupToNative = async (): Promise<{ success: boolean; error
 /**
  * Tự động phục hồi khi mở ứng dụng:
  * Nếu WebKit LocalStorage bị xóa sau khi update Sideloadly (số hiệp < 11.842 hoặc rỗng),
- * tự động kéo dữ liệu từ iOS Documents vào lại LocalStorage!
+ * tự động kéo dữ liệu từ iOS Documents hoặc Preferences vào lại LocalStorage!
  */
 export const autoHealFromNativePersistence = async (): Promise<{ healed: boolean; message?: string }> => {
   try {
@@ -177,40 +186,29 @@ export const autoHealFromNativePersistence = async (): Promise<{ healed: boolean
 
     let nativeBackupCandidate: any = null;
 
-    // Thử đọc từ iOS Documents (Nguồn tài liệu vĩnh viễn của Apple)
     if (Capacitor.isNativePlatform()) {
+      // 1. Thử đọc từ iOS Documents
       try {
-        const fileRes = await Filesystem.readFile({
-          path: BACKUP_FILE_NAME,
-          directory: Directory.Documents,
-          encoding: Encoding.UTF8
-        });
-        const content = typeof fileRes.data === 'string' ? fileRes.data : await (fileRes.data as Blob).text();
-        if (content) {
-          const parsedDoc = JSON.parse(content);
+        const docRes = await NativeStorage.readDocumentFile({ name: BACKUP_FILE_NAME });
+        if (docRes.success && docRes.content) {
+          const parsedDoc = JSON.parse(docRes.content);
           if (parsedDoc && (parsedDoc.rawLogsCount || (parsedDoc.rawLogs && parsedDoc.rawLogs.length))) {
             nativeBackupCandidate = parsedDoc;
           }
         }
-      } catch (e) {
-        // Thử đọc tiếp file log riêng nếu file backup tổng chưa có
+      } catch (e) {}
+
+      // 2. Thử đọc từ Preferences nếu Documents chưa thấy
+      if (!nativeBackupCandidate) {
         try {
-          const logRes = await Filesystem.readFile({
-            path: LOGS_FILE_NAME,
-            directory: Directory.Documents,
-            encoding: Encoding.UTF8
-          });
-          const logContent = typeof logRes.data === 'string' ? logRes.data : await (logRes.data as Blob).text();
-          if (logContent) {
-            const parsedLogs = JSON.parse(logContent);
-            if (Array.isArray(parsedLogs) && parsedLogs.length > 0) {
-              nativeBackupCandidate = {
-                rawLogs: parsedLogs,
-                rawLogsCount: parsedLogs.length
-              };
+          const prefRes = await NativeStorage.readPreference({ key: 'fitbod_backup_latest' });
+          if (prefRes.success && prefRes.value) {
+            const parsedPref = JSON.parse(prefRes.value);
+            if (parsedPref && (parsedPref.rawLogsCount || (parsedPref.rawLogs && parsedPref.rawLogs.length))) {
+              nativeBackupCandidate = parsedPref;
             }
           }
-        } catch (err2) {}
+        } catch (e) {}
       }
     }
 
@@ -219,11 +217,9 @@ export const autoHealFromNativePersistence = async (): Promise<{ healed: boolean
       const candidateLogs = nativeBackupCandidate.rawLogs || [];
       const candidateCount = candidateLogs.length || nativeBackupCandidate.rawLogsCount || 0;
 
-      // Nếu bản sao lưu native có nhiều hiệp hơn hoặc LocalStorage đang bị reset
       if (candidateCount > currentLogsCount && candidateCount > 0) {
         console.log(`[NativePersistence] Phát hiện LocalStorage (${currentLogsCount} hiệp) ít hơn iOS Documents (${candidateCount} hiệp). Đang tự động phục hồi...`);
         
-        // Phục hồi toàn bộ cài đặt & lịch sử
         if (nativeBackupCandidate.rawLocalStorageDump) {
           Object.entries(nativeBackupCandidate.rawLocalStorageDump).forEach(([k, v]) => {
             if (v) {
@@ -258,7 +254,7 @@ export const autoHealFromNativePersistence = async (): Promise<{ healed: boolean
 };
 
 /**
- * Quét toàn diện tất cả các nguồn lưu trữ (LocalStorage, Documents)
+ * Quét toàn diện tất cả các nguồn lưu trữ (LocalStorage, Documents, Preferences)
  * Giúp Sếp tìm lại bất kỳ hiệp tập nào bị lạc sau khi nạp IPA
  */
 export const scanAllStorageSources = async (): Promise<StorageScanItem[]> => {
@@ -301,14 +297,9 @@ export const scanAllStorageSources = async (): Promise<StorageScanItem[]> => {
   // 2. Quét iOS Documents
   if (Capacitor.isNativePlatform()) {
     try {
-      const fileRes = await Filesystem.readFile({
-        path: BACKUP_FILE_NAME,
-        directory: Directory.Documents,
-        encoding: Encoding.UTF8
-      });
-      const content = typeof fileRes.data === 'string' ? fileRes.data : await (fileRes.data as Blob).text();
-      if (content) {
-        const parsedDoc = JSON.parse(content);
+      const docRes = await NativeStorage.readDocumentFile({ name: BACKUP_FILE_NAME });
+      if (docRes.success && docRes.content) {
+        const parsedDoc = JSON.parse(docRes.content);
         const count = parsedDoc.rawLogs?.length || parsedDoc.rawLogsCount || 0;
         if (count > 0) {
           results.push({
@@ -323,14 +314,9 @@ export const scanAllStorageSources = async (): Promise<StorageScanItem[]> => {
     } catch (e) {}
 
     try {
-      const logRes = await Filesystem.readFile({
-        path: LOGS_FILE_NAME,
-        directory: Directory.Documents,
-        encoding: Encoding.UTF8
-      });
-      const logContent = typeof logRes.data === 'string' ? logRes.data : await (logRes.data as Blob).text();
-      if (logContent) {
-        const parsedLogs = JSON.parse(logContent);
+      const logRes = await NativeStorage.readDocumentFile({ name: LOGS_FILE_NAME });
+      if (logRes.success && logRes.content) {
+        const parsedLogs = JSON.parse(logRes.content);
         if (Array.isArray(parsedLogs) && parsedLogs.length > 0) {
           const lastEntry = parsedLogs[parsedLogs.length - 1];
           results.push({
@@ -339,6 +325,24 @@ export const scanAllStorageSources = async (): Promise<StorageScanItem[]> => {
             count: parsedLogs.length,
             dateSample: lastEntry?.date || 'Tệp iOS',
             data: parsedLogs
+          });
+        }
+      }
+    } catch (e) {}
+
+    // 3. Quét Preferences
+    try {
+      const prefRes = await NativeStorage.readPreference({ key: 'fitbod_backup_latest' });
+      if (prefRes.success && prefRes.value) {
+        const parsedPref = JSON.parse(prefRes.value);
+        const count = parsedPref.rawLogs?.length || parsedPref.rawLogsCount || 0;
+        if (count > 0) {
+          results.push({
+            source: 'iOS Preferences',
+            key: 'fitbod_backup_latest',
+            count,
+            dateSample: parsedPref.timestamp ? `Bản lưu ${parsedPref.timestamp.slice(0, 10)}` : 'Preferences',
+            data: parsedPref
           });
         }
       }
@@ -353,7 +357,7 @@ export const scanAllStorageSources = async (): Promise<StorageScanItem[]> => {
  */
 export const restoreFromScannedItem = (item: StorageScanItem): void => {
   try {
-    if (item.source === 'iOS Documents' && item.data && item.data.localStorageData) {
+    if ((item.source === 'iOS Documents' || item.source === 'iOS Preferences') && item.data && item.data.localStorageData) {
       const backup = item.data;
       if (backup.rawLocalStorageDump) {
         Object.entries(backup.rawLocalStorageDump).forEach(([k, v]) => {
@@ -377,7 +381,7 @@ export const restoreFromScannedItem = (item: StorageScanItem): void => {
       setProfileItem('fitbod_stats_cache', JSON.stringify(item.data));
     }
 
-    // Sau khi nạp vào LocalStorage, lập tức backup ra Documents
+    // Sau khi nạp vào LocalStorage, lập tức backup ra Documents & Preferences
     persistBackupToNative();
   } catch (e) {
     throw e;

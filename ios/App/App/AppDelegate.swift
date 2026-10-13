@@ -49,3 +49,92 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         return config
     }
 }
+
+// MARK: - Native Document Storage Plugin for Permanent Data Persistence
+@objc(NativeStoragePlugin)
+public class NativeStoragePlugin: CAPPlugin, CAPBridgedPlugin {
+    public let identifier = "NativeStoragePlugin"
+    public let jsName = "NativeStorage"
+    public let pluginMethods: [CAPPluginMethod] = [
+        CAPPluginMethod(name: "writeDocumentFile", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "readDocumentFile", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "listDocumentFiles", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "writePreference", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "readPreference", returnType: CAPPluginReturnPromise)
+    ]
+
+    @objc func writeDocumentFile(_ call: CAPPluginCall) {
+        let name = (call.options["name"] as? String) ?? "fitbod_backup_latest.json"
+        let content = (call.options["content"] as? String) ?? ""
+        if let docsDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
+            let fileURL = docsDir.appendingPathComponent(name)
+            do {
+                try content.write(to: fileURL, atomically: true, encoding: .utf8)
+                call.resolve(["success": true, "path": fileURL.path])
+                return
+            } catch {
+                call.resolve(["success": false, "error": error.localizedDescription])
+                return
+            }
+        }
+        call.resolve(["success": false, "error": "No documents directory"])
+    }
+
+    @objc func readDocumentFile(_ call: CAPPluginCall) {
+        let name = (call.options["name"] as? String) ?? "fitbod_backup_latest.json"
+        if let docsDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
+            let fileURL = docsDir.appendingPathComponent(name)
+            if FileManager.default.fileExists(atPath: fileURL.path) {
+                do {
+                    let content = try String(contentsOf: fileURL, encoding: .utf8)
+                    call.resolve(["success": true, "content": content])
+                    return
+                } catch {
+                    call.resolve(["success": false, "error": error.localizedDescription])
+                    return
+                }
+            } else {
+                call.resolve(["success": false, "error": "File does not exist"])
+                return
+            }
+        }
+        call.resolve(["success": false, "error": "No documents directory"])
+    }
+
+    @objc func listDocumentFiles(_ call: CAPPluginCall) {
+        if let docsDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
+            do {
+                let fileURLs = try FileManager.default.contentsOfDirectory(at: docsDir, includingPropertiesForKeys: nil)
+                let names = fileURLs.map { $0.lastPathComponent }
+                call.resolve(["success": true, "files": names])
+                return
+            } catch {
+                call.resolve(["success": false, "files": []])
+                return
+            }
+        }
+        call.resolve(["success": false, "files": []])
+    }
+
+    @objc func writePreference(_ call: CAPPluginCall) {
+        let key = (call.options["key"] as? String) ?? ""
+        let value = (call.options["value"] as? String) ?? ""
+        if !key.isEmpty {
+            UserDefaults.standard.set(value, forKey: key)
+            call.resolve(["success": true])
+            return
+        }
+        call.resolve(["success": false, "error": "Empty key"])
+    }
+
+    @objc func readPreference(_ call: CAPPluginCall) {
+        let key = (call.options["key"] as? String) ?? ""
+        if !key.isEmpty {
+            let value = UserDefaults.standard.string(forKey: key)
+            call.resolve(["success": true, "value": value as Any])
+            return
+        }
+        call.resolve(["success": false, "error": "Empty key"])
+    }
+}
+
