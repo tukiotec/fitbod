@@ -383,13 +383,12 @@ export async function scheduleNativeRestNotification(
               allowWhileIdle: true
             },
             sound: 'default', // Bắt buộc để iOS phát chuông & rung Taptic Engine khi app ở background / màn hình khóa
-            interruptionLevel: 'timeSensitive', // Đảm bảo ưu tiên cao nhất, sáng màn hình khóa iOS
             actionTypeId: 'REST_TIMER_CATEGORY',
             extra: {
               type: 'rest_timer_complete',
               targetEpochMs
             }
-          }
+          } as any
         ]
       });
       console.log('[LocalNotifications] Successfully scheduled for:', targetDate.toLocaleTimeString());
