@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Play, Minimize2, Bell, Smartphone, ShieldCheck, Vibrate, Volume1, Volume2 } from 'lucide-react';
 import { 
   requestNotificationPermission, 
+  checkNotificationGranted,
   getRestAlertMode, 
   setRestAlertMode, 
   triggerDeviceVibration,
@@ -32,10 +33,14 @@ export const RestTimerOverlay: React.FC<RestTimerOverlayProps> = ({
   onClose,
   onSkip
 }) => {
-  const [hasNotification, setHasNotification] = useState<boolean>(() => {
-    return 'Notification' in window && Notification.permission === 'granted';
-  });
+  const [hasNotification, setHasNotification] = useState<boolean>(false);
   const [alertMode, setAlertModeState] = useState<RestAlertMode>(() => getRestAlertMode());
+
+  useEffect(() => {
+    checkNotificationGranted().then(granted => {
+      setHasNotification(granted);
+    });
+  }, []);
 
   const handleEnableNotification = async () => {
     const res = await requestNotificationPermission();

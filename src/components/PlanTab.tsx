@@ -95,7 +95,8 @@ export const PlanTab: React.FC<PlanTabProps> = ({
   const goalOptions: { id: FitnessGoal; label: string; desc: string }[] = [
     { id: 'hypertrophy', label: 'Tăng Cơ (Hypertrophy)', desc: '3-4 sets x 8-12 reps, nghỉ 90s' },
     { id: 'strength', label: 'Sức Mạnh (Strength)', desc: '4-5 sets x 3-5 reps, nghỉ 180s, có AMRAP' },
-    { id: 'tone', label: 'Săn Chắc (Tone)', desc: '3 sets x 12-16 reps, nghỉ 45s' }
+    { id: 'tone', label: 'Săn Chắc (Tone)', desc: '3 sets x 12-16 reps, nghỉ 45s' },
+    { id: 'calorie_burn', label: '🔥 Đốt Calo & Giảm Mỡ (HIIT Circuit)', desc: 'Tempo nhanh, 14-18 reps, nghỉ 35s, tự động thêm Cardio đốt 500-700+ kcal' }
   ];
 
   const splitOptions: { id: FitnessSplit; label: string; desc: string }[] = [

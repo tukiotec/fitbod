@@ -194,6 +194,24 @@ export const GYM_MACHINES_CATALOG: GymMachineItem[] = [
     imageUrl: 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Elliptical_Trainer/0.jpg',
     description: 'Máy tập toàn thân chuyển động elip không xung kích, phối hợp cả tay và chân.',
     exerciseIds: ['cardio_elliptical']
+  },
+  {
+    id: 'cardio_rowing',
+    nameVi: 'Máy Chèo Thuyền (Rowing Machine)',
+    nameEn: 'Rowing Machine',
+    category: 'cardio',
+    imageUrl: 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Rowing_Stationary/0.jpg',
+    description: 'Máy chèo thuyền thể lực, kích hoạt toàn bộ cơ lưng xô, đùi và hệ tim mạch.',
+    exerciseIds: ['cardio_rowing']
+  },
+  {
+    id: 'cardio_stairmaster',
+    nameVi: 'Máy Leo Thang (Stairmaster / Stair Climber)',
+    nameEn: 'Stair Climber',
+    category: 'cardio',
+    imageUrl: 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Stair_Climber/0.jpg',
+    description: 'Máy bước bậc thang liên tục, kích hoạt cơ mông và đốt calo mạnh nhất phòng gym.',
+    exerciseIds: ['cardio_stairmaster']
   }
 ];
 

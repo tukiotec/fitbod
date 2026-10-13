@@ -21,7 +21,8 @@ import {
   Info
 } from 'lucide-react';
 import { parseFitbodCsvText, FitbodCsvParseResult, FitbodRawLogEntry } from '../engine/fitbodEngine';
-import { getActiveProfile, getProfileItem, setProfileItem } from '../utils/profileStorage';
+import { getActiveProfile, getProfileItem, setProfileItem, resetToDefaultFitbodHistory } from '../utils/profileStorage';
+import { DEFAULT_FITBOD_STATS } from '../data/defaultWorkoutHistory';
 
 interface HistoryTabProps {
   onImportSuccess: (data: any) => void;
@@ -37,11 +38,18 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({ onImportSuccess }) => {
   const [stats, setStats] = useState<FitbodCsvParseResult | null>(() => {
     try {
       const saved = getProfileItem('fitbod_stats_cache');
-      return saved ? JSON.parse(saved) : null;
+      return saved ? JSON.parse(saved) : DEFAULT_FITBOD_STATS;
     } catch (e) {
-      return null;
+      return DEFAULT_FITBOD_STATS;
     }
   });
+
+  const handleLoadSepsHistory = () => {
+    resetToDefaultFitbodHistory();
+    setStats(DEFAULT_FITBOD_STATS);
+    setImportStatus(`✅ Đã nạp thành công 382 buổi tập, 11.842 hiệp tập và 274 kỷ lục PR của Sếp!`);
+    onImportSuccess(DEFAULT_FITBOD_STATS);
+  };
 
   // Xử lý nạp file thống nhất: Tự động phân biệt file .CSV hay .JSON
   const handleUnifiedFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -332,13 +340,44 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({ onImportSuccess }) => {
           </div>
         </div>
 
-        {/* Nút nạp mẫu dữ liệu */}
-        <div className="mt-3 text-center border-t border-slate-100 pt-2.5">
+        {/* Khối Lịch Sử Fitbod Thực Tế Của Sếp (382 Buổi • 11.842 Hiệp) */}
+        <div className="mt-3.5 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 p-4 rounded-2xl text-white shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5 text-xs font-black text-white">
+              <Trophy className="w-4 h-4 text-amber-300 shrink-0" />
+              <span>Lịch Sử Fitbod Thực Tế Của Sếp</span>
+            </div>
+            <p className="text-[11px] text-blue-100 font-medium mt-0.5">
+              382 Buổi tập • 11.842 Hiệp tập • 2.64M kg Tổng tải • 274 PRs
+            </p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <a
+              href="/workout_history_tunguyen_561d749a_20260915.csv"
+              download="workout_history_tunguyen_561d749a_20260915.csv"
+              className="px-3 py-2 bg-white/15 hover:bg-white/25 text-white border border-white/30 rounded-xl text-xs font-bold active:scale-95 transition flex items-center gap-1"
+              title="Tải về file CSV gốc đã lưu trong ứng dụng"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>Tải CSV Gốc</span>
+            </a>
+            <button
+              onClick={handleLoadSepsHistory}
+              className="px-3.5 py-2 bg-white text-blue-700 hover:bg-blue-50 rounded-xl text-xs font-black active:scale-95 transition shadow-sm flex items-center gap-1"
+            >
+              <RefreshCw className="w-3.5 h-3.5 text-blue-700" />
+              <span>Nạp Lại Ngay</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Nút nạp mẫu dữ liệu nhỏ để test */}
+        <div className="mt-2.5 text-center border-t border-slate-100 pt-2">
           <button
             onClick={loadSampleData}
-            className="text-xs font-bold text-blue-600 hover:text-blue-700 underline"
+            className="text-[11px] font-semibold text-slate-400 hover:text-slate-600 underline"
           >
-            + Nạp thử dữ liệu mẫu Fitbod (3 buổi tập thực tế)
+            + Nạp thử dữ liệu mẫu nhỏ (3 buổi tập thực tế)
           </button>
         </div>
 
@@ -427,11 +466,22 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({ onImportSuccess }) => {
                     <h4 className="text-xs font-bold text-slate-900 truncate">{r.exercise}</h4>
                     <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                       <span className="text-[11px] text-slate-500 font-medium">Set đỉnh: {r.bestSet}</span>
-                      {r.maxWeight > 0 && (
-                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-md border border-emerald-200/60">
-                          Tạ Max: {r.maxWeight}kg
-                        </span>
-                      )}
+                      {(() => {
+                        const isAssisted = r.exercise.toLowerCase().includes('assisted') || r.originalCsvName.toLowerCase().includes('assisted');
+                        if (isAssisted) {
+                          const w = r.maxWeight < 0 ? r.maxWeight : -Math.abs(r.maxWeight);
+                          return (
+                            <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded-md border border-indigo-200/60">
+                              Trợ lực ít nhất: {w}kg
+                            </span>
+                          );
+                        }
+                        return r.maxWeight > 0 ? (
+                          <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-md border border-emerald-200/60">
+                            Tạ Max: {r.maxWeight}kg
+                          </span>
+                        ) : null;
+                      })()}
                     </div>
                   </div>
                 </div>

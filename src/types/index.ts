@@ -102,7 +102,7 @@ export interface WorkoutSet {
   cableRatio?: '1:1' | '2:1';
 }
 
-export type CardioType = 'none' | 'bike' | 'treadmill' | 'elliptical';
+export type CardioType = 'none' | 'bike' | 'treadmill' | 'elliptical' | 'rowing' | 'stairmaster' | 'jump_rope';
 
 export interface PlannedExercise {
   exerciseId: string;
@@ -145,6 +145,7 @@ export interface WorkoutPlan {
   excludedExerciseIds?: string[];
   bodyProfile?: UserBodyProfile;
   spineSafeMode?: boolean;
+  estimatedCalories?: number;
 }
 
 export interface UserPersonalRecord {
@@ -162,7 +163,7 @@ export interface GymProfile {
   availableEquipment: EquipmentType[];
 }
 
-export type FitnessGoal = 'hypertrophy' | 'strength' | 'tone';
+export type FitnessGoal = 'hypertrophy' | 'strength' | 'tone' | 'calorie_burn';
 export type FitnessSplit = 'push_pull_legs' | 'upper_lower' | 'full_body';
 
 export interface ExerciseHistoryRecord {

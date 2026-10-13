@@ -1,5 +1,6 @@
 import { Capacitor } from '@capacitor/core';
-import { Haptics, NotificationType } from '@capacitor/haptics';
+import { Haptics, NotificationType, ImpactStyle } from '@capacitor/haptics';
+import { LocalNotifications } from '@capacitor/local-notifications';
 /**
  * Background Timer & Rest Engine (Rung Im Lặng & Đếm Giờ Màn Hình Chờ iOS)
  * Chuyên dụng cho iOS Safari (iPhone 16 / iOS 18) & PWA Standalone:
@@ -205,17 +206,50 @@ export function formatTimeDisplay(totalSeconds: number): string {
   return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
 }
 
+function playAcousticHapticPulse() {
+  try {
+    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    if (ctx.state === 'suspended') {
+      ctx.resume();
+    }
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(75, ctx.currentTime); // 75Hz sub-bass haptic frequency
+    gain.gain.setValueAtTime(0.8, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.35);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.35);
+  } catch (e) {}
+}
+
 export async function triggerDeviceVibration() {
+  // 1. Kích hoạt xung âm thanh tần số thấp làm rung màng loa vật lý
+  playAcousticHapticPulse();
+
+  // 2. Kích hoạt Capacitor native Haptics đa nhịp
   if (Capacitor.isNativePlatform()) {
     try {
-      await Haptics.notification({ type: NotificationType.Success });
-      await Haptics.vibrate({ duration: 600 });
+      await Haptics.impact({ style: ImpactStyle.Heavy });
+      await Haptics.vibrate({ duration: 700 });
+      setTimeout(async () => {
+        try {
+          await Haptics.notification({ type: NotificationType.Warning });
+          await Haptics.vibrate({ duration: 700 });
+        } catch (e) {}
+      }, 200);
       return;
     } catch (e) {}
   }
+
+  // 3. Web Navigator vibration API (3 nhịp dồn dập)
   if (typeof navigator !== 'undefined' && 'vibrate' in navigator && navigator.vibrate) {
     try {
-      navigator.vibrate([400, 150, 400, 150, 500]);
+      navigator.vibrate([450, 150, 450, 150, 650]);
     } catch (e) {}
   }
 }
@@ -267,6 +301,112 @@ export function updateLockScreenMedia(
       if (onAdd30s) onAdd30s();
     });
   } catch (e) {}
+}
+
+export const REST_NOTIFICATION_ID = 8888;
+
+// Đăng ký action category cho iOS UNUserNotificationCenter khi khởi chạy
+if (typeof window !== 'undefined' && Capacitor.isNativePlatform()) {
+  try {
+    LocalNotifications.registerActionTypes({
+      types: [
+        {
+          id: 'REST_TIMER_CATEGORY',
+          actions: [
+            {
+              id: 'OPEN_APP',
+              title: 'Vào hiệp tập ngay 💪'
+            }
+          ]
+        }
+      ]
+    }).catch(() => {});
+  } catch (e) {}
+}
+
+export async function checkNotificationGranted(): Promise<boolean> {
+  if (Capacitor.isNativePlatform()) {
+    try {
+      const perm = await LocalNotifications.checkPermissions();
+      return perm.display === 'granted';
+    } catch (e) {
+      return false;
+    }
+  }
+  return typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted';
+}
+
+/**
+ * Đặt lịch thông báo Native iOS UNUserNotificationCenter:
+ * Chạy trực tiếp từ hệ thống iOS, độc lập 100% với WebKit/Javascript!
+ * Khi hết giờ:
+ * - Dù người dùng đang ở app khác (Facebook, TikTok, Safari...) hay đang khóa màn hình
+ * - iOS tự động sáng màn hình, hiển thị banner và RUNG TAPTIC ENGINE (chuông/rung theo cài đặt máy)
+ */
+export async function scheduleNativeRestNotification(
+  targetEpochMs: number,
+  nextExerciseName?: string,
+  mode: RestAlertMode = 'vibrate'
+) {
+  try {
+    if (Capacitor.isNativePlatform()) {
+      // 1. Huỷ thông báo đếm ngược cũ nếu còn
+      await LocalNotifications.cancel({
+        notifications: [{ id: REST_NOTIFICATION_ID }]
+      }).catch(() => {});
+
+      // 2. Tự động kiểm tra và yêu cầu quyền nếu chưa cấp
+      let perm = await LocalNotifications.checkPermissions();
+      if (perm.display !== 'granted') {
+        perm = await LocalNotifications.requestPermissions();
+        if (perm.display !== 'granted') {
+          console.warn('[LocalNotifications] Permission display status:', perm.display);
+        }
+      }
+
+      const targetDate = new Date(targetEpochMs);
+      if (targetDate.getTime() <= Date.now()) return;
+
+      const title = mode === 'vibrate' ? '📳 HẾT GIỜ NGHỈ!' : '🔔 HẾT GIỜ NGHỈ!';
+      const body = nextExerciseName 
+        ? `Vào hiệp tiếp theo thôi Sếp: ${nextExerciseName}!` 
+        : 'Hết giờ nghỉ hồi phục, vào hiệp mới thôi Sếp ơi!';
+
+      await LocalNotifications.schedule({
+        notifications: [
+          {
+            id: REST_NOTIFICATION_ID,
+            title,
+            body,
+            schedule: { 
+              at: targetDate,
+              allowWhileIdle: true
+            },
+            sound: 'default', // Bắt buộc để iOS phát chuông & rung Taptic Engine khi app ở background / màn hình khóa
+            interruptionLevel: 'timeSensitive', // Đảm bảo ưu tiên cao nhất, sáng màn hình khóa iOS
+            actionTypeId: 'REST_TIMER_CATEGORY',
+            extra: {
+              type: 'rest_timer_complete',
+              targetEpochMs
+            }
+          }
+        ]
+      });
+      console.log('[LocalNotifications] Successfully scheduled for:', targetDate.toLocaleTimeString());
+    }
+  } catch (err) {
+    console.warn('[LocalNotifications] Failed to schedule native notification:', err);
+  }
+}
+
+export async function cancelNativeRestNotification() {
+  try {
+    if (Capacitor.isNativePlatform()) {
+      await LocalNotifications.cancel({
+        notifications: [{ id: REST_NOTIFICATION_ID }]
+      });
+    }
+  } catch (err) {}
 }
 
 export function fireLockScreenNotification(nextSetText?: string, mode: RestAlertMode = 'vibrate') {
@@ -329,6 +469,9 @@ export function startBackgroundRestCountdown(params: RestCountdownParams) {
 
   // 1. Kích hoạt giữ màn hình sáng (WakeLock) để màn hình không tự tắt sau 30s
   requestScreenWakeLock();
+
+  // 2. Đặt lịch thông báo Native iOS UNUserNotificationCenter (tự động bật màn hình, rung & báo khi ở app khác hoặc màn hình khóa)
+  scheduleNativeRestNotification(params.targetEpochMs, params.nextExerciseName, mode);
 
   // 2. Tạo Dynamic Continuous WAV Audio Blob (Phần cứng CoreAudio duy trì chạy ngầm)
   const blob = createRestAudioBlob(duration, mode);
@@ -428,6 +571,7 @@ export function adjustBackgroundRestTime(deltaSeconds: number) {
   }
 
   updateLockScreenMedia(newRem, activeParams.nextExerciseName, activeParams.onSkipRest, activeParams.onAdd30s, mode);
+  scheduleNativeRestNotification(newEpoch, activeParams.nextExerciseName, mode);
   activeParams.onTick(newRem);
 }
 
@@ -468,6 +612,7 @@ function handleRestComplete() {
 export function stopBackgroundRestCountdown() {
   currentTargetEpoch = null;
   releaseScreenWakeLock();
+  cancelNativeRestNotification();
 
   if (backgroundWorker) {
     try {
@@ -502,6 +647,14 @@ export function isStandalonePWA(): boolean {
 }
 
 export async function requestNotificationPermission(): Promise<NotificationPermission> {
+  if (Capacitor.isNativePlatform()) {
+    try {
+      const res = await LocalNotifications.requestPermissions();
+      return res.display === 'granted' ? 'granted' : 'denied';
+    } catch (e) {
+      return 'denied';
+    }
+  }
   if (!('Notification' in window)) return 'denied';
   try {
     const res = await Notification.requestPermission();

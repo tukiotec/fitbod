@@ -1,6 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Play, Image as ImageIcon, Video, AlertTriangle, CheckCircle, Dumbbell, Flame, Target, Sparkles, Film, ExternalLink, Star, Ban } from 'lucide-react';
+import { 
+  X, Play, Image as ImageIcon, Video, AlertTriangle, CheckCircle, 
+  Dumbbell, Flame, Target, Sparkles, Film, ExternalLink, Star, Ban,
+  Calendar, Trophy, History, TrendingUp, Award, Clock
+} from 'lucide-react';
 import { PlannedExercise } from '../types';
 import { AnatomyDiagram } from './AnatomyDiagram';
 import { 
@@ -10,6 +14,9 @@ import {
   subscribeExercisePreferences, 
   ExercisePreferenceStatus 
 } from '../data/exerciseCatalog';
+import { getExerciseHistorySessions } from '../data/defaultWorkoutHistory';
+import { getProfileItem } from '../utils/profileStorage';
+import { FitbodRawLogEntry } from '../engine/fitbodEngine';
 
 interface ExerciseDetailModalProps {
   exercise: PlannedExercise;
@@ -20,6 +27,9 @@ export const ExerciseDetailModal: React.FC<ExerciseDetailModalProps> = ({
   exercise,
   onClose
 }) => {
+  // Quản lý tab chính: Hướng dẫn kỹ thuật ('guide') vs Lịch sử tập ('history')
+  const [mainTab, setMainTab] = useState<'guide' | 'history'>('guide');
+
   // Luôn nạp thông tin từ EXERCISE_CATALOG để bài tập từ session cũ vẫn có đầy đủ videoUrl & ảnh chuẩn 100%
   const catalogItem = EXERCISE_CATALOG.find(c => c.id === exercise.exerciseId);
   const activeVideoUrl = catalogItem?.videoUrl || exercise.videoUrl;
@@ -30,6 +40,22 @@ export const ExerciseDetailModal: React.FC<ExerciseDetailModalProps> = ({
   const activeSetup = catalogItem?.setup || exercise.setup;
   const activeExecution = catalogItem?.execution || exercise.execution;
   const activeMistakes = catalogItem?.mistakes || exercise.mistakes;
+
+  // Lấy toàn bộ lịch sử tập luyện và PRs của bài tập này từ dữ liệu 382 buổi tập
+  const historyData = useMemo(() => {
+    let logsOverride: FitbodRawLogEntry[] | undefined;
+    try {
+      const rawCache = getProfileItem('fitbod_stats_cache');
+      if (rawCache) {
+        const parsed = JSON.parse(rawCache);
+        if (parsed && Array.isArray(parsed.rawLogs)) {
+          logsOverride = parsed.rawLogs;
+        }
+      }
+    } catch (e) {}
+
+    return getExerciseHistorySessions(exercise.exerciseId, exercise.exerciseName, logsOverride);
+  }, [exercise.exerciseId, exercise.exerciseName]);
 
   // Quản lý trạng thái Ưu tiên (Favorite ⭐) / Loại trừ (Exclude 🚫)
   const [prefStatus, setPrefStatus] = useState<ExercisePreferenceStatus>(() => {
@@ -192,11 +218,43 @@ export const ExerciseDetailModal: React.FC<ExerciseDetailModalProps> = ({
           </div>
         </div>
 
+        {/* Main Tab Switcher: Kỹ Thuật (Form & Video) vs Lịch Sử Tập & PRs */}
+        <div className="flex border-b border-slate-200 bg-slate-50 px-5 pt-2 shrink-0">
+          <button
+            onClick={() => setMainTab('guide')}
+            className={`flex-1 py-2.5 text-xs font-black border-b-2 transition flex items-center justify-center gap-1.5 ${
+              mainTab === 'guide'
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <Film className="w-3.5 h-3.5" />
+            <span>Kỹ Thuật & Video</span>
+          </button>
+          <button
+            onClick={() => setMainTab('history')}
+            className={`flex-1 py-2.5 text-xs font-black border-b-2 transition flex items-center justify-center gap-1.5 relative ${
+              mainTab === 'history'
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <History className="w-3.5 h-3.5" />
+            <span>Lịch Sử Tập & PRs</span>
+            {historyData.summary && historyData.summary.totalSets > 0 && (
+              <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-black bg-blue-100 text-blue-700">
+                {historyData.summary.totalSets}
+              </span>
+            )}
+          </button>
+        </div>
+
         {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto p-5 space-y-4">
-          
-          {/* Media Player Box (Loop Video vs YouTube HD vs Anatomy vs 2-Frame Images) */}
-          <div className="bg-slate-950 rounded-3xl overflow-hidden shadow-inner border border-slate-800 relative">
+          {mainTab === 'guide' ? (
+            <>
+              {/* Media Player Box (Loop Video vs YouTube HD vs Anatomy vs 2-Frame Images) */}
+              <div className="bg-slate-950 rounded-3xl overflow-hidden shadow-inner border border-slate-800 relative">
             
             {/* Media Selector Pill */}
             <div className="absolute top-3 left-3 z-10 flex flex-wrap gap-1 bg-black/75 backdrop-blur-md p-1 rounded-xl border border-white/10 shadow-lg">
@@ -542,7 +600,158 @@ export const ExerciseDetailModal: React.FC<ExerciseDetailModalProps> = ({
               <span>Xem phân tích chuyên sâu trên YouTube ↗</span>
             </a>
           </div>
+            </>
+          ) : (
+            /* Tab Lịch Sử Tập Luyện & PRs Cá Nhân của Sếp */
+            <div className="space-y-4">
+              {!historyData.summary || historyData.sessions.length === 0 ? (
+                <div className="p-8 text-center bg-slate-50 rounded-3xl border border-slate-200">
+                  <History className="w-10 h-10 text-slate-300 mx-auto mb-2" />
+                  <p className="text-sm font-bold text-slate-700">Chưa có lịch sử tập cho bài này</p>
+                  <p className="text-xs text-slate-500 mt-1 max-w-xs mx-auto">
+                    Khi Sếp hoàn thành bài tập này trong bất kỳ buổi tập nào, các hiệp tập sẽ tự động được lưu và hiển thị chi tiết tại đây.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  {/* Thống kê PRs & Thành tích */}
+                  <div className="bg-gradient-to-br from-blue-50 to-indigo-50/50 p-4 rounded-3xl border border-blue-200/80 shadow-sm">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2 text-blue-900 font-extrabold text-xs uppercase tracking-wider">
+                        <Trophy className="w-4 h-4 text-amber-500" />
+                        <span>Kỷ Lục Cá Nhân (Personal Records)</span>
+                      </div>
+                      {historyData.summary.lastDate && (
+                        <span className="text-[11px] font-bold text-slate-500 flex items-center gap-1">
+                          <Clock className="w-3 h-3" /> Gần nhất: {historyData.summary.lastDate}
+                        </span>
+                      )}
+                    </div>
 
+                    {(() => {
+                      const isAssisted = !!(historyData.summary.isAssisted || 
+                        exercise.exerciseName.toLowerCase().includes('assisted') || 
+                        exercise.exerciseId.toLowerCase().includes('assisted'));
+
+                      return (
+                        <div className="grid grid-cols-2 gap-2.5">
+                          <div className="bg-white/90 p-3 rounded-2xl border border-blue-100 shadow-xs">
+                            <div className="text-[11px] font-bold text-slate-500 mb-0.5">
+                              {isAssisted ? 'Trợ Lực Ít Nhất (PR)' : 'Tạ Nặng Nhất (Max Weight)'}
+                            </div>
+                            <div className="text-xl font-black text-blue-700">
+                              {isAssisted
+                                ? `-${Math.abs(historyData.summary.maxWeight)} kg`
+                                : (historyData.summary.maxWeight > 0 ? `${historyData.summary.maxWeight} kg` : 'Bodyweight')}
+                            </div>
+                          </div>
+
+                          <div className="bg-white/90 p-3 rounded-2xl border border-blue-100 shadow-xs">
+                            <div className="text-[11px] font-bold text-slate-500 mb-0.5">Ước Tính 1RM (Est. 1RM)</div>
+                            <div className="text-xl font-black text-emerald-600">
+                              {historyData.summary.maxE1RM > 0 ? `${historyData.summary.maxE1RM} kg` : 'N/A'}
+                            </div>
+                          </div>
+
+                          <div className="bg-white/90 p-3 rounded-2xl border border-blue-100 shadow-xs">
+                            <div className="text-[11px] font-bold text-slate-500 mb-0.5">Set Đỉnh Nhất (Best Set)</div>
+                            <div className="text-xs font-black text-purple-700 truncate" title={historyData.summary.bestSet}>
+                              {historyData.summary.bestSet || 'Chưa có'}
+                            </div>
+                          </div>
+
+                          <div className="bg-white/90 p-3 rounded-2xl border border-blue-100 shadow-xs">
+                            <div className="text-[11px] font-bold text-slate-500 mb-0.5">Tần Suất Tập Luyện</div>
+                            <div className="text-xs font-black text-slate-800">
+                              {historyData.summary.totalSessions} buổi • {historyData.summary.totalSets} hiệp
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+
+                  {/* Danh sách từng buổi tập trong quá khứ */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between px-1">
+                      <span className="text-xs font-extrabold text-slate-500 uppercase tracking-wider">
+                        Lịch Sử Từng Buổi ({historyData.sessions.length} Buổi)
+                      </span>
+                      <span className="text-[11px] font-bold text-slate-400">
+                        Mới nhất xếp trước
+                      </span>
+                    </div>
+
+                    {historyData.sessions.map((session, sIdx) => {
+                      const maxW = historyData.summary?.maxWeight || 0;
+                      const isAssisted = !!(historyData.summary?.isAssisted || 
+                        exercise.exerciseName.toLowerCase().includes('assisted') || 
+                        exercise.exerciseId.toLowerCase().includes('assisted'));
+
+                      return (
+                        <div 
+                          key={`${session.date}-${sIdx}`}
+                          className="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs space-y-2.5 hover:border-slate-300 transition"
+                        >
+                          {/* Header buổi tập */}
+                          <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                            <div className="flex items-center gap-1.5 font-bold text-xs text-slate-800">
+                              <Calendar className="w-3.5 h-3.5 text-blue-600" />
+                              <span>{session.formattedDate}</span>
+                            </div>
+                            {session.totalVolumeKg > 0 && (
+                              <span className="text-[11px] font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200">
+                                Tổng tải: {session.totalVolumeKg.toLocaleString()} kg
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Danh sách các hiệp trong buổi */}
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                            {session.sets.map((set, setIdx) => {
+                              const isPRWeight = maxW !== 0 && set.weightKg === maxW && !set.isWarmup;
+                              return (
+                                <div 
+                                  key={setIdx}
+                                  className={`flex items-center justify-between px-3 py-1.5 rounded-xl text-xs font-semibold ${
+                                    set.isWarmup 
+                                      ? 'bg-amber-50/70 border border-amber-200/60 text-amber-900' 
+                                      : isPRWeight
+                                        ? 'bg-blue-50 border border-blue-200 text-blue-900 font-bold'
+                                        : 'bg-slate-50 border border-slate-100 text-slate-800'
+                                  }`}
+                                >
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-[11px] text-slate-500 font-bold">
+                                      {set.isWarmup ? 'Khởi động' : `Hiệp ${set.setIndex}`}
+                                    </span>
+                                    {isPRWeight && (
+                                      <span className="px-1 py-0.2 rounded bg-amber-200 text-amber-900 text-[9px] font-black">
+                                        PR
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-bold text-slate-700">{set.reps} reps</span>
+                                    <span className="text-slate-300">•</span>
+                                    <span className="font-extrabold text-slate-900">
+                                      {isAssisted
+                                        ? `-${Math.abs(set.weightKg)} kg`
+                                        : (set.weightKg > 0 ? `${set.weightKg} kg` : 'Bodyweight')}
+                                    </span>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Bottom CTA */}

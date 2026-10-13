@@ -39,10 +39,13 @@ import {
   roundGymWeight,
   calculateExerciseRestSeconds,
   sanitizeWorkoutForSpineSafety,
+  syncRecoveryFromWorkoutLogs,
+  isAssistedExercise,
   FitbodRawLogEntry,
   FitbodCsvParseResult
 } from './engine/fitbodEngine';
 import { ALL_MACHINE_IDS, getExcludedExerciseIds } from './data/gymMachines';
+import { DEFAULT_FITBOD_STATS } from './data/defaultWorkoutHistory';
 
 import { WorkoutTab } from './components/WorkoutTab';
 import { RecoveryTab } from './components/RecoveryTab';
@@ -96,13 +99,42 @@ export const App: React.FC = () => {
     return parseInt(getProfileItem('fitbod_cardio_duration') || '15', 10);
   });
 
-  // Muscle recovery states
+  // Muscle recovery states & Live exponential recovery model
+  const [baseRecovery, setBaseRecovery] = useState<Record<MuscleGroup, number>>(() => {
+    const saved = getProfileItem('fitbod_base_recovery');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {}
+    }
+    const savedRec = getProfileItem('fitbod_recovery');
+    if (savedRec) {
+      try {
+        return JSON.parse(savedRec);
+      } catch (e) {}
+    }
+    const initial: Record<MuscleGroup, number> = {} as any;
+    (Object.keys(MUSCLES_INFO) as MuscleGroup[]).forEach(m => { initial[m] = 100; });
+    return initial;
+  });
+
+  const [lastTrainedTime, setLastTrainedTime] = useState<Record<MuscleGroup, number | null>>(() => {
+    const saved = getProfileItem('fitbod_last_trained_time');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {}
+    }
+    const initial: Record<MuscleGroup, number | null> = {} as any;
+    (Object.keys(MUSCLES_INFO) as MuscleGroup[]).forEach(m => { initial[m] = null; });
+    return initial;
+  });
+
   const [recoveryState, setRecoveryState] = useState<Record<MuscleGroup, number>>(() => {
     const saved = getProfileItem('fitbod_recovery');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        // Tự động phục hồi nếu trước đó bị lỗi trừ cứng 10% lưng xô khi chỉ tập 1 set
         if (parsed.lats === 10 && (parsed.chest >= 90 || !parsed.chest)) {
           parsed.lats = 96;
         }
@@ -113,6 +145,48 @@ export const App: React.FC = () => {
     (Object.keys(MUSCLES_INFO) as MuscleGroup[]).forEach(m => { initial[m] = 100; });
     return initial;
   });
+
+  // ⚡ BỘ ĐẾM HỒI PHỤC CƠ BẮP THỜI GIAN THỰC (LIVE DYNAMIC RECOVERY TICKER)
+  // Tự động tính toán mức hồi phục tăng dần theo từng phút / giờ chuẩn thuật toán Fitbod AI
+  useEffect(() => {
+    const updateLiveRecovery = () => {
+      const now = Date.now();
+      const updated = calculateDynamicRecovery(baseRecovery, lastTrainedTime, now);
+      setRecoveryState(prev => {
+        let changed = false;
+        (Object.keys(updated) as MuscleGroup[]).forEach(m => {
+          if (updated[m] !== prev[m]) {
+            changed = true;
+          }
+        });
+        if (changed) {
+          try {
+            setProfileItem('fitbod_recovery', JSON.stringify(updated));
+          } catch (e) {}
+          return updated;
+        }
+        return prev;
+      });
+    };
+
+    updateLiveRecovery();
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        updateLiveRecovery();
+      }
+    };
+    window.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('focus', updateLiveRecovery);
+
+    const interval = setInterval(updateLiveRecovery, 60000);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('focus', updateLiveRecovery);
+    };
+  }, [baseRecovery, lastTrainedTime]);
 
   // Custom target muscles
   const [customTargetMuscles, setCustomTargetMuscles] = useState<MuscleGroup[] | null>(() => {
@@ -445,6 +519,87 @@ export const App: React.FC = () => {
     }
   };
 
+  const handleChangeGoal = (nextGoal: FitnessGoal) => {
+    setGoal(nextGoal);
+    try {
+      setProfileItem('fitbod_goal', nextGoal);
+    } catch (e) {}
+    if (!isWorkingOut) {
+      const fresh = generateSmartWorkout(
+        recoveryState,
+        equipment,
+        nextGoal,
+        split,
+        duration,
+        includeWarmup,
+        cardioType,
+        cardioDuration,
+        customTargetMuscles || undefined,
+        exerciseHistory,
+        equipmentPreference,
+        excludedExerciseIds,
+        undefined,
+        bodyProfile,
+        exercisePreferences
+      );
+      setCurrentWorkout(fresh);
+    }
+  };
+
+  const handleChangeSplit = (nextSplit: FitnessSplit) => {
+    setSplit(nextSplit);
+    try {
+      setProfileItem('fitbod_split', nextSplit);
+    } catch (e) {}
+    if (!isWorkingOut) {
+      const fresh = generateSmartWorkout(
+        recoveryState,
+        equipment,
+        goal,
+        nextSplit,
+        duration,
+        includeWarmup,
+        cardioType,
+        cardioDuration,
+        customTargetMuscles || undefined,
+        exerciseHistory,
+        equipmentPreference,
+        excludedExerciseIds,
+        undefined,
+        bodyProfile,
+        exercisePreferences
+      );
+      setCurrentWorkout(fresh);
+    }
+  };
+
+  const handleChangeDuration = (nextDuration: number) => {
+    setDuration(nextDuration);
+    try {
+      setProfileItem('fitbod_duration', nextDuration.toString());
+    } catch (e) {}
+    if (!isWorkingOut) {
+      const fresh = generateSmartWorkout(
+        recoveryState,
+        equipment,
+        goal,
+        split,
+        nextDuration,
+        includeWarmup,
+        cardioType,
+        cardioDuration,
+        customTargetMuscles || undefined,
+        exerciseHistory,
+        equipmentPreference,
+        excludedExerciseIds,
+        undefined,
+        bodyProfile,
+        exercisePreferences
+      );
+      setCurrentWorkout(fresh);
+    }
+  };
+
   const handleToggleMaxEffort = (exerciseIndex: number) => {
     setCurrentWorkout(prev => {
       const updated = { ...prev };
@@ -593,12 +748,25 @@ export const App: React.FC = () => {
         setup: replacement.setup,
         execution: replacement.execution,
         mistakes: replacement.mistakes,
-        sets: exList[index].sets.map(s => ({
-          ...s,
-          targetWeight: s.type === 'warmup' ? roundGymWeight(defaultWeight * 0.5, replacement.equipment, replacement.id) : defaultWeight,
-          targetReps: s.targetReps || 10,
-          cableRatio: replacement?.cableConfig?.pulleyRatio
-        }))
+        sets: exList[index].sets.map(s => {
+          const isAssisted = isAssistedExercise(replacement);
+          let targetW = defaultWeight;
+          if (s.type === 'warmup') {
+            if (isAssisted) {
+              const uBw = (currentWorkout.bodyProfile || bodyProfile)?.weightKg || 70;
+              const netPeak = Math.max(10, uBw - Math.abs(defaultWeight));
+              targetW = roundGymWeight(Math.max(0, uBw - netPeak * 0.50), replacement.equipment, replacement.id);
+            } else {
+              targetW = roundGymWeight(defaultWeight * 0.5, replacement.equipment, replacement.id);
+            }
+          }
+          return {
+            ...s,
+            targetWeight: targetW,
+            targetReps: s.targetReps || 10,
+            cableRatio: replacement?.cableConfig?.pulleyRatio
+          };
+        })
       };
       updated.exercises = exList;
       setCurrentWorkout(updated);
@@ -626,16 +794,38 @@ export const App: React.FC = () => {
   };
 
   const updateSingleMuscle = (muscle: MuscleGroup, val: number) => {
-    setRecoveryState(prev => ({
-      ...prev,
-      [muscle]: Math.max(0, Math.min(100, val))
-    }));
+    const clamped = Math.max(0, Math.min(100, val));
+    const nextRec = { ...recoveryState, [muscle]: clamped };
+    const nextBase = { ...baseRecovery, [muscle]: clamped };
+    const nextLast = { ...lastTrainedTime, [muscle]: clamped < 100 ? Date.now() : null };
+    
+    setRecoveryState(nextRec);
+    setBaseRecovery(nextBase);
+    setLastTrainedTime(nextLast);
+
+    try {
+      setProfileItem('fitbod_recovery', JSON.stringify(nextRec));
+      setProfileItem('fitbod_base_recovery', JSON.stringify(nextBase));
+      setProfileItem('fitbod_last_trained_time', JSON.stringify(nextLast));
+    } catch (e) {}
   };
 
   const resetAllRecovery = () => {
     const full: Record<MuscleGroup, number> = {} as any;
-    (Object.keys(MUSCLES_INFO) as MuscleGroup[]).forEach(m => { full[m] = 100; });
+    const nullTime: Record<MuscleGroup, number | null> = {} as any;
+    (Object.keys(MUSCLES_INFO) as MuscleGroup[]).forEach(m => { 
+      full[m] = 100; 
+      nullTime[m] = null;
+    });
     setRecoveryState(full);
+    setBaseRecovery(full);
+    setLastTrainedTime(nullTime);
+
+    try {
+      setProfileItem('fitbod_recovery', JSON.stringify(full));
+      setProfileItem('fitbod_base_recovery', JSON.stringify(full));
+      setProfileItem('fitbod_last_trained_time', JSON.stringify(nullTime));
+    } catch (e) {}
   };
 
   const handleFinishWorkout = (summary: { 
@@ -654,7 +844,38 @@ export const App: React.FC = () => {
 
     // Apply fatigue CHÍNH XÁC theo các hiệp thực tế đã tick hoàn thành
     if (summary.exercises && summary.exercises.length > 0) {
-      setRecoveryState(prev => calculateCompletedWorkoutFatigue(prev, summary.exercises!));
+      const newRecovery = calculateCompletedWorkoutFatigue(recoveryState, summary.exercises);
+      const nowMs = Date.now();
+      const nextLastTrained = { ...lastTrainedTime };
+      const nextBaseRecovery = { ...baseRecovery };
+
+      summary.exercises.forEach(ex => {
+        const completedSets = ex.sets.filter(s => s.isCompleted);
+        if (completedSets.length === 0) return;
+
+        const catItem = EXERCISE_CATALOG.find(c => c.id === ex.exerciseId);
+        if (!catItem) return;
+
+        catItem.primaryMuscles.forEach(pm => {
+          nextLastTrained[pm.muscle] = nowMs;
+          nextBaseRecovery[pm.muscle] = newRecovery[pm.muscle];
+        });
+
+        catItem.secondaryMuscles?.forEach(sm => {
+          nextLastTrained[sm.muscle] = nowMs;
+          nextBaseRecovery[sm.muscle] = newRecovery[sm.muscle];
+        });
+      });
+
+      setLastTrainedTime(nextLastTrained);
+      setBaseRecovery(nextBaseRecovery);
+      setRecoveryState(newRecovery);
+
+      try {
+        setProfileItem('fitbod_last_trained_time', JSON.stringify(nextLastTrained));
+        setProfileItem('fitbod_base_recovery', JSON.stringify(nextBaseRecovery));
+        setProfileItem('fitbod_recovery', JSON.stringify(newRecovery));
+      } catch (e) {}
 
       // Cập nhật lịch sử bài tập để tính chu kỳ Max Effort Day chuẩn Fitbod
       setExerciseHistory(prev => {
@@ -827,6 +1048,94 @@ export const App: React.FC = () => {
     }
   };
 
+  const handleSyncHistoryRecovery = () => {
+    let logs: FitbodRawLogEntry[] = [];
+    try {
+      const savedLogs = getProfileItem('fitbod_workout_log');
+      if (savedLogs) {
+        logs = JSON.parse(savedLogs);
+      }
+    } catch (e) {}
+
+    if (logs.length === 0 && DEFAULT_FITBOD_STATS?.rawLogs) {
+      logs = DEFAULT_FITBOD_STATS.rawLogs;
+    }
+
+    const synced = syncRecoveryFromWorkoutLogs(logs, Date.now());
+    setRecoveryState(synced.recoveryState);
+    setBaseRecovery(synced.baseRecovery);
+    setLastTrainedTime(synced.lastTrainedTime);
+
+    try {
+      setProfileItem('fitbod_recovery', JSON.stringify(synced.recoveryState));
+      setProfileItem('fitbod_base_recovery', JSON.stringify(synced.baseRecovery));
+      setProfileItem('fitbod_last_trained_time', JSON.stringify(synced.lastTrainedTime));
+    } catch (e) {}
+  };
+
+  const handleSimulateWorkoutDemo = (target: 'push' | 'pull' | 'legs') => {
+    const nowMs = Date.now();
+    const nextRec = { ...recoveryState };
+    const nextBase = { ...baseRecovery };
+    const nextLast = { ...lastTrainedTime };
+
+    if (target === 'pull') {
+      nextRec.lats = 24;
+      nextBase.lats = 24;
+      nextLast.lats = nowMs;
+
+      nextRec.biceps = 28;
+      nextBase.biceps = 28;
+      nextLast.biceps = nowMs;
+
+      nextRec.upper_back = 35;
+      nextBase.upper_back = 35;
+      nextLast.upper_back = nowMs;
+
+      nextRec.traps = 45;
+      nextBase.traps = 45;
+      nextLast.traps = nowMs;
+    } else if (target === 'push') {
+      nextRec.chest = 22;
+      nextBase.chest = 22;
+      nextLast.chest = nowMs;
+
+      nextRec.triceps = 26;
+      nextBase.triceps = 26;
+      nextLast.triceps = nowMs;
+
+      nextRec.shoulders = 32;
+      nextBase.shoulders = 32;
+      nextLast.shoulders = nowMs;
+    } else {
+      nextRec.quads = 20;
+      nextBase.quads = 20;
+      nextLast.quads = nowMs;
+
+      nextRec.hamstrings = 25;
+      nextBase.hamstrings = 25;
+      nextLast.hamstrings = nowMs;
+
+      nextRec.glutes = 30;
+      nextBase.glutes = 30;
+      nextLast.glutes = nowMs;
+
+      nextRec.calves = 40;
+      nextBase.calves = 40;
+      nextLast.calves = nowMs;
+    }
+
+    setRecoveryState(nextRec);
+    setBaseRecovery(nextBase);
+    setLastTrainedTime(nextLast);
+
+    try {
+      setProfileItem('fitbod_recovery', JSON.stringify(nextRec));
+      setProfileItem('fitbod_base_recovery', JSON.stringify(nextBase));
+      setProfileItem('fitbod_last_trained_time', JSON.stringify(nextLast));
+    } catch (e) {}
+  };
+
   const handleImportSuccess = (parsedData: any) => {
     if (parsedData?.exerciseHistory && Object.keys(parsedData.exerciseHistory).length > 0) {
       setExerciseHistory(parsedData.exerciseHistory);
@@ -834,13 +1143,19 @@ export const App: React.FC = () => {
         setProfileItem('fitbod_exercise_history', JSON.stringify(parsedData.exerciseHistory));
       } catch (e) {}
     }
-    // Cập nhật mức độ hồi phục cơ bắp thông minh
-    setRecoveryState(prev => ({
-      ...prev,
-      chest: 85,
-      shoulders: 80,
-      triceps: 75
-    }));
+    
+    // Tự động đồng bộ chuẩn xác toàn bộ 14 nhóm cơ từ logs vừa import
+    if (parsedData?.rawLogs && parsedData.rawLogs.length > 0) {
+      const synced = syncRecoveryFromWorkoutLogs(parsedData.rawLogs, Date.now());
+      setRecoveryState(synced.recoveryState);
+      setBaseRecovery(synced.baseRecovery);
+      setLastTrainedTime(synced.lastTrainedTime);
+      try {
+        setProfileItem('fitbod_recovery', JSON.stringify(synced.recoveryState));
+        setProfileItem('fitbod_base_recovery', JSON.stringify(synced.baseRecovery));
+        setProfileItem('fitbod_last_trained_time', JSON.stringify(synced.lastTrainedTime));
+      } catch (e) {}
+    }
   };
 
   const handleFactoryReset = () => {
@@ -977,8 +1292,12 @@ export const App: React.FC = () => {
           {activeTab === 'recovery' && (
             <RecoveryTab
               recoveryState={recoveryState}
+              baseRecovery={baseRecovery}
+              lastTrainedTime={lastTrainedTime}
               onUpdateRecovery={updateSingleMuscle}
               onResetAll={resetAllRecovery}
+              onSyncHistoryRecovery={handleSyncHistoryRecovery}
+              onSimulateWorkoutDemo={handleSimulateWorkoutDemo}
             />
           )}
 
@@ -989,11 +1308,11 @@ export const App: React.FC = () => {
           {activeTab === 'plan' && (
             <PlanTab
               goal={goal}
-              setGoal={setGoal}
+              setGoal={handleChangeGoal}
               split={split}
-              setSplit={setSplit}
+              setSplit={handleChangeSplit}
               duration={duration}
-              setDuration={setDuration}
+              setDuration={handleChangeDuration}
               equipment={equipment}
               toggleEquipment={toggleEquipment}
               onRegenerate={handleRegenerateWorkout}
@@ -1025,23 +1344,31 @@ export const App: React.FC = () => {
               <h3 className="text-xl font-black text-slate-900 mb-1">Xuất Sắc, Sếp Ơi!</h3>
               <p className="text-xs text-slate-500 mb-5">Đã hoàn thành buổi tập và cập nhật độ mỏi cơ bắp</p>
 
-              <div className="grid grid-cols-3 gap-2 bg-slate-50 p-3 rounded-2xl mb-5 border border-slate-100">
+              <div className="grid grid-cols-4 gap-1.5 bg-slate-50 p-3 rounded-2xl mb-5 border border-slate-100">
                 <div>
                   <span className="text-[10px] text-slate-400 font-semibold block uppercase">Thời gian</span>
                   <span className="text-sm font-extrabold text-slate-800">
-                    {Math.floor(finishedSummary.durationSeconds / 60)} phút
+                    {Math.floor(finishedSummary.durationSeconds / 60)}p
                   </span>
                 </div>
                 <div>
                   <span className="text-[10px] text-slate-400 font-semibold block uppercase">Sets xong</span>
                   <span className="text-sm font-extrabold text-slate-800">
-                    {finishedSummary.totalSets} sets
+                    {finishedSummary.totalSets}
                   </span>
                 </div>
                 <div>
                   <span className="text-[10px] text-slate-400 font-semibold block uppercase">Tổng tải</span>
                   <span className="text-sm font-extrabold text-blue-600">
-                    {Math.round(finishedSummary.totalVolume)} kg
+                    {Math.round(finishedSummary.totalVolume)}kg
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-amber-600 font-semibold block uppercase flex items-center justify-center gap-0.5">
+                    🔥 Calo
+                  </span>
+                  <span className="text-sm font-extrabold text-amber-600">
+                    ~{Math.round(Math.max(80, (finishedSummary.durationSeconds / 60) * ((goal === 'calorie_burn' ? 9.2 : 6.0) * 3.5 * (bodyProfile.weightKg || 70) / 200)))}
                   </span>
                 </div>
               </div>

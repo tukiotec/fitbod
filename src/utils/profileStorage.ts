@@ -1,4 +1,5 @@
 import { UserProfile } from '../types';
+import { DEFAULT_FITBOD_STATS } from '../data/defaultWorkoutHistory';
 
 const PROFILES_KEY = 'fitbod_user_profiles';
 const ACTIVE_PROFILE_KEY = 'fitbod_active_profile_id';
@@ -50,7 +51,43 @@ export const getScopedKey = (baseKey: string, profileId: string = getActiveProfi
 
 export const getProfileItem = (baseKey: string): string | null => {
   if (typeof window === 'undefined' || typeof localStorage === 'undefined') return null;
-  return localStorage.getItem(getScopedKey(baseKey));
+  const key = getScopedKey(baseKey);
+  const val = localStorage.getItem(key);
+  if (val) return val;
+
+  // Tự động nạp lịch sử bài tập của Sếp (382 buổi, 11.842 hiệp) cho profile mặc định
+  if (getActiveProfileId() === 'default') {
+    if (baseKey === 'fitbod_stats_cache' || baseKey === 'fitbod_csv_stats') {
+      const defaultVal = JSON.stringify(DEFAULT_FITBOD_STATS);
+      try { localStorage.setItem(key, defaultVal); } catch (e) {}
+      return defaultVal;
+    }
+    if (baseKey === 'fitbod_exercise_history') {
+      const defaultVal = JSON.stringify(DEFAULT_FITBOD_STATS.exerciseHistory || {});
+      try { localStorage.setItem(key, defaultVal); } catch (e) {}
+      return defaultVal;
+    }
+    if (baseKey === 'fitbod_workout_log') {
+      const defaultVal = JSON.stringify(DEFAULT_FITBOD_STATS.rawLogs || []);
+      try { localStorage.setItem(key, defaultVal); } catch (e) {}
+      return defaultVal;
+    }
+  }
+
+  return null;
+};
+
+export const resetToDefaultFitbodHistory = (): void => {
+  if (typeof window === 'undefined' || typeof localStorage === 'undefined') return;
+  const defaultVal = JSON.stringify(DEFAULT_FITBOD_STATS);
+  setProfileItem('fitbod_stats_cache', defaultVal);
+  setProfileItem('fitbod_csv_stats', defaultVal);
+  if (DEFAULT_FITBOD_STATS.exerciseHistory) {
+    setProfileItem('fitbod_exercise_history', JSON.stringify(DEFAULT_FITBOD_STATS.exerciseHistory));
+  }
+  if (DEFAULT_FITBOD_STATS.rawLogs) {
+    setProfileItem('fitbod_workout_log', JSON.stringify(DEFAULT_FITBOD_STATS.rawLogs));
+  }
 };
 
 export const setProfileItem = (baseKey: string, value: string): void => {

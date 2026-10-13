@@ -28,7 +28,7 @@ import { RestTimerOverlay } from './RestTimerOverlay';
 import { WorkoutQueueModal } from './WorkoutQueueModal';
 import { SwapExerciseModal } from './SwapExerciseModal';
 import { EXERCISE_CATALOG, MUSCLES_INFO } from '../data/exerciseCatalog';
-import { calculateE1RM, calculateExerciseRestSeconds } from '../engine/fitbodEngine';
+import { calculateE1RM, calculateExerciseRestSeconds, stepGymStackWeight, getLbsFromKg, formatWeightWithLbs, isAssistedExercise, isSmithMachineExercise, isPlateLoadedExercise, isCableOrPinStackExercise } from '../engine/fitbodEngine';
 import { MaxEffortCelebrationModal } from './MaxEffortCelebrationModal';
 import { 
   startBackgroundRestCountdown, 
@@ -38,6 +38,11 @@ import {
   getRestAlertMode,
   triggerDeviceVibration
 } from '../utils/backgroundTimer';
+import { 
+  startWorkoutLockScreen, 
+  updateWorkoutLockScreen, 
+  stopWorkoutLockScreen 
+} from '../utils/workoutLockScreen';
 
 const SESSION_STORAGE_KEY = 'fitbod_active_session';
 
@@ -434,8 +439,24 @@ export const ActiveWorkoutModal: React.FC<ActiveWorkoutModalProps> = ({
         const val = (s.loggedReps ?? s.targetReps) + delta;
         s.loggedReps = Math.max(1, Math.round(val));
       } else {
-        const val = (s.loggedWeight ?? s.targetWeight) + delta;
-        s.loggedWeight = Math.max(0, Math.round(val * 10) / 10);
+        const isAssisted = isAssistedExercise(ex);
+        const currentW = s.loggedWeight ?? s.targetWeight;
+        if (isAssisted) {
+          const curMag = Math.abs(currentW);
+          const newMag = stepGymStackWeight(curMag, delta > 0 ? 1 : -1);
+          s.loggedWeight = -newMag;
+        } else if (isCableOrPinStackExercise(ex)) {
+          s.loggedWeight = stepGymStackWeight(currentW, delta > 0 ? 1 : -1);
+        } else if (isSmithMachineExercise(ex)) {
+          const val = currentW + (delta > 0 ? 2.5 : -2.5);
+          s.loggedWeight = Math.max(15, Math.round(val * 10) / 10);
+        } else if (isPlateLoadedExercise(ex)) {
+          const val = currentW + (delta > 0 ? 2.5 : -2.5);
+          s.loggedWeight = Math.max(0, Math.round(val * 10) / 10);
+        } else {
+          const val = currentW + delta;
+          s.loggedWeight = Math.max(0, Math.round(val * 10) / 10);
+        }
       }
       sets[setIndex] = s;
       ex.sets = sets;
@@ -452,13 +473,53 @@ export const ActiveWorkoutModal: React.FC<ActiveWorkoutModalProps> = ({
       const s = { ...sets[setIndex] };
 
       if (field === 'loggedReps') {
-        s.loggedReps = Math.max(1, Math.round(val));
+        s.loggedReps = Math.max(0, Math.round(val));
       } else {
-        s.loggedWeight = Math.max(0, Math.round(val * 10) / 10);
+        const isAssisted = isAssistedExercise(ex);
+        if (isAssisted) {
+          s.loggedWeight = -Math.abs(val);
+        } else {
+          s.loggedWeight = Math.max(0, Math.round(val * 10) / 10);
+        }
       }
       sets[setIndex] = s;
       ex.sets = sets;
       updated[currentExIndex] = ex;
+      return updated;
+    });
+  };
+
+  // Switch cardio exercise in real time
+  const handleSwitchCardio = (cardioId: string, durationMinutes: number = 15) => {
+    const catalogItem = EXERCISE_CATALOG.find(c => c.id === cardioId);
+    if (!catalogItem) return;
+
+    setExercises(prev => {
+      const updated = [...prev];
+      const current = updated[currentExIndex];
+      updated[currentExIndex] = {
+        ...current,
+        exerciseId: catalogItem.id,
+        exerciseName: catalogItem.name,
+        equipment: catalogItem.equipment,
+        primaryMuscles: catalogItem.primaryMuscles.map(m => m.muscle),
+        images: catalogItem.images,
+        videoUrl: catalogItem.videoUrl,
+        videoEmbedId: catalogItem.videoEmbedId,
+        setup: catalogItem.setup,
+        execution: catalogItem.execution,
+        mistakes: catalogItem.mistakes,
+        cardioMinutes: durationMinutes,
+        sets: [
+          {
+            setIndex: 1,
+            type: 'working',
+            targetWeight: 0,
+            targetReps: durationMinutes,
+            isCompleted: current.sets[0]?.isCompleted || false
+          }
+        ]
+      };
       return updated;
     });
   };
@@ -544,7 +605,45 @@ export const ActiveWorkoutModal: React.FC<ActiveWorkoutModalProps> = ({
     });
   };
 
-  // Toggle Set Complete & trigger Rest Timer
+  // Finish Workout
+  const handleFinish = (overrideExercises?: PlannedExercise[] | unknown) => {
+    stopWorkoutLockScreen();
+    stopBackgroundRestCountdown();
+    setRestTargetTime(null);
+    setRemainingRestSeconds(0);
+    setShowRestOverlay(false);
+
+    confetti({
+      particleCount: 140,
+      spread: 80,
+      origin: { y: 0.6 }
+    });
+
+    const exList: PlannedExercise[] = Array.isArray(overrideExercises) ? (overrideExercises as PlannedExercise[]) : exercises;
+    let totalSets = 0;
+    let totalVolume = 0;
+    exList.forEach(ex => {
+      ex.sets.forEach(s => {
+        if (s.isCompleted) {
+          totalSets++;
+          totalVolume += (s.loggedWeight ?? s.targetWeight) * (s.loggedReps ?? s.targetReps);
+        }
+      });
+    });
+
+    try {
+      localStorage.removeItem(SESSION_STORAGE_KEY);
+    } catch (e) {}
+
+    onFinishWorkout({
+      totalSets,
+      totalVolume,
+      durationSeconds: workoutSeconds,
+      exercises: exList
+    });
+  };
+
+  // Toggle Set Complete & trigger Rest Timer (Auto-finish if last set of workout)
   const toggleSetComplete = (setIndex: number) => {
     playChime('start');
     setExercises(prev => {
@@ -558,6 +657,30 @@ export const ActiveWorkoutModal: React.FC<ActiveWorkoutModalProps> = ({
       if (willComplete) {
         if (currentSet.loggedWeight === undefined) currentSet.loggedWeight = currentSet.targetWeight;
         if (currentSet.loggedReps === undefined) currentSet.loggedReps = currentSet.targetReps;
+
+        sets[setIndex] = currentSet;
+        ex.sets = sets;
+        updated[currentExIndex] = ex;
+
+        // KIỂM TRA XEM TẤT CẢ CÁC BÀI TẬP VÀ HIỆP ĐÃ TICK XONG HẾT CHƯA
+        const isAllWorkoutFinished = updated.every(e => e.sets.every(s => s.isCompleted));
+        if (isAllWorkoutFinished) {
+          // 🎉 TẤT CẢ BÀI TẬP ĐÃ HOÀN TẤT XUẤT SẮC!
+          // DỪNG NGAY BẤT KỲ REST TIMER NÀO ĐANG CHẠY (KHÔNG BẮT SẾP PHẢI CHỜ ĐỢI)
+          stopBackgroundRestCountdown();
+          setRestTargetTime(null);
+          setRemainingRestSeconds(0);
+          setShowRestOverlay(false);
+
+          playChime('finish');
+
+          // Tự động mở ngay màn hình hoàn thành buổi tập!
+          setTimeout(() => {
+            handleFinish(updated);
+          }, 350);
+
+          return updated;
+        }
 
         // Determine next set info
         let nextInfo = null;
@@ -646,6 +769,57 @@ export const ActiveWorkoutModal: React.FC<ActiveWorkoutModalProps> = ({
     });
   };
 
+  // ⚡ BẮT ĐẦU LOCK SCREEN WORKOUT CONTROLLER (Hiển thị & Chuyển bài ở màn hình khóa iOS/Android)
+  useEffect(() => {
+    startWorkoutLockScreen({
+      onNextExercise: () => {
+        setCurrentExIndex(prev => Math.min(exercises.length - 1, prev + 1));
+      },
+      onPrevExercise: () => {
+        setCurrentExIndex(prev => Math.max(0, prev - 1));
+      },
+      onToggleCurrentSet: () => {
+        if (restTargetTime || showRestOverlay) {
+          handleSkipRest();
+        } else {
+          const ex = exercises[currentExIndex];
+          if (ex) {
+            const firstIncomplete = ex.sets.findIndex(s => !s.isCompleted);
+            if (firstIncomplete !== -1) {
+              toggleSetComplete(firstIncomplete);
+            }
+          }
+        }
+      }
+    });
+
+    return () => {
+      stopWorkoutLockScreen();
+    };
+  }, [exercises, currentExIndex, restTargetTime, showRestOverlay]);
+
+  // Cập nhật thông tin bài tập lên Màn hình khoá (Lock Screen Media Widget)
+  useEffect(() => {
+    if (!currentExercise) return;
+    const currentSetIdx = currentExercise.sets.findIndex(s => !s.isCompleted);
+    const activeSet = currentSetIdx !== -1 
+      ? currentExercise.sets[currentSetIdx] 
+      : currentExercise.sets[currentExercise.sets.length - 1];
+
+    updateWorkoutLockScreen({
+      currentExerciseIndex: currentExIndex,
+      totalExercises: exercises.length,
+      exerciseName: currentExercise.exerciseName,
+      currentSetIndex: currentSetIdx !== -1 ? currentSetIdx : currentExercise.sets.length - 1,
+      totalSets: currentExercise.sets.length,
+      weightKg: activeSet?.loggedWeight ?? activeSet?.targetWeight ?? 0,
+      reps: activeSet?.loggedReps ?? activeSet?.targetReps ?? 10,
+      isResting: Boolean(restTargetTime && remainingRestSeconds > 0),
+      restRemainingSeconds: remainingRestSeconds,
+      workoutDurationSeconds: workoutSeconds
+    });
+  }, [currentExIndex, exercises, restTargetTime, remainingRestSeconds, workoutSeconds, currentExercise]);
+
   // Swap Exercise
   const handleSwapExercise = (newEx: ExerciseItem) => {
     const oldEx = exercises[currentExIndex];
@@ -690,37 +864,6 @@ export const ActiveWorkoutModal: React.FC<ActiveWorkoutModalProps> = ({
       return next;
     });
     setShowSwapModal(false);
-  };
-
-  // Finish Workout
-  const handleFinish = () => {
-    confetti({
-      particleCount: 120,
-      spread: 70,
-      origin: { y: 0.6 }
-    });
-
-    let totalSets = 0;
-    let totalVolume = 0;
-    exercises.forEach(ex => {
-      ex.sets.forEach(s => {
-        if (s.isCompleted) {
-          totalSets++;
-          totalVolume += (s.loggedWeight ?? s.targetWeight) * (s.loggedReps ?? s.targetReps);
-        }
-      });
-    });
-
-    try {
-      localStorage.removeItem(SESSION_STORAGE_KEY);
-    } catch (e) {}
-
-    onFinishWorkout({
-      totalSets,
-      totalVolume,
-      durationSeconds: workoutSeconds,
-      exercises
-    });
   };
 
   // Reorder exercises
@@ -815,7 +958,7 @@ export const ActiveWorkoutModal: React.FC<ActiveWorkoutModalProps> = ({
             <ListOrdered className="w-4 h-4" />
           </button>
           <button
-            onClick={handleFinish}
+            onClick={() => handleFinish()}
             className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-extrabold text-xs rounded-xl shadow-xs transition"
           >
             Xong
@@ -910,26 +1053,28 @@ export const ActiveWorkoutModal: React.FC<ActiveWorkoutModalProps> = ({
                 <span>Đổi bài</span>
               </button>
 
-              {currentExercise.equipment === 'cable' && (
-                <button
-                  onClick={() => setShowCableModal(true)}
-                  className="flex items-center gap-1 px-2 py-1 bg-purple-50 hover:bg-purple-100 active:scale-95 border border-purple-200 rounded-xl text-[11px] font-bold text-purple-700 transition"
-                >
-                  <Layers className="w-3 h-3" />
-                  <span>Cọc tạ</span>
-                </button>
-              )}
-
-              {currentExercise.equipment === 'barbell' && (
+              {isPlateLoadedExercise(currentExercise) && (
                 <button
                   onClick={() => {
-                    setSelectedWeightForCalc(currentExercise.sets[0]?.targetWeight || 40);
+                    setSelectedWeightForCalc(currentExercise.sets[0]?.targetWeight || (isSmithMachineExercise(currentExercise) ? 40 : 60));
                     setShowPlateCalc(true);
                   }}
                   className="flex items-center gap-1 px-2 py-1 bg-blue-50 hover:bg-blue-100 active:scale-95 border border-blue-200 rounded-xl text-[11px] font-bold text-blue-700 transition"
+                  title={isSmithMachineExercise(currentExercise) ? "Máy Smith: Mở máy tính xếp đĩa tạ kg mỗi bên" : "Mở Plate Calculator (bánh đĩa kg)"}
                 >
-                  <Dumbbell className="w-3 h-3" />
-                  <span>Đĩa tạ</span>
+                  <Dumbbell className="w-3 h-3 text-blue-600" />
+                  <span>{isSmithMachineExercise(currentExercise) ? "Đĩa kg Smith" : "Đĩa tạ (kg)"}</span>
+                </button>
+              )}
+
+              {isCableOrPinStackExercise(currentExercise) && (
+                <button
+                  onClick={() => setShowCableModal(true)}
+                  className="flex items-center gap-1 px-2 py-1 bg-purple-50 hover:bg-purple-100 active:scale-95 border border-purple-200 rounded-xl text-[11px] font-bold text-purple-700 transition"
+                  title="Xem nấc cọc tạ cáp/máy (lbs) & tỷ lệ ròng rọc"
+                >
+                  <Layers className="w-3 h-3 text-purple-600" />
+                  <span>Cọc tạ (lbs)</span>
                 </button>
               )}
             </div>
@@ -984,25 +1129,96 @@ export const ActiveWorkoutModal: React.FC<ActiveWorkoutModalProps> = ({
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
         {isCardio ? (
           /* Cardio exercise view */
-          <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm text-center">
-            <div className="w-16 h-16 bg-orange-50 text-orange-600 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Flame className="w-8 h-8" />
+          <div className="bg-white rounded-3xl p-5 border border-slate-200/90 shadow-sm space-y-4">
+            <div className="text-center">
+              <div className="w-14 h-14 bg-orange-100 text-orange-600 rounded-2xl flex items-center justify-center mx-auto mb-2 shadow-xs">
+                <Flame className="w-7 h-7" />
+              </div>
+              <h3 className="text-base font-black text-slate-900">{currentExercise.exerciseName}</h3>
+              <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">{currentExercise.execution}</p>
             </div>
-            <h3 className="text-lg font-black text-slate-900 mb-1">Cardio Cuối Buổi</h3>
-            <p className="text-xs text-slate-500 mb-6">{currentExercise.execution}</p>
 
+            {/* Quick Switch Cardio Exercises Grid */}
+            <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200/80">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[11px] font-black text-slate-700 uppercase tracking-wider">
+                  Chọn Môn Cardio:
+                </span>
+                <button
+                  onClick={() => setShowSwapModal(true)}
+                  className="text-[10px] font-bold text-blue-600 hover:underline flex items-center gap-1"
+                >
+                  <RefreshCw className="w-2.5 h-2.5" />
+                  <span>Xem thêm môn</span>
+                </button>
+              </div>
+
+              <div className="grid grid-cols-3 gap-1.5">
+                {[
+                  { id: 'cardio_treadmill', label: 'Chạy Bộ', icon: '🏃‍♂️' },
+                  { id: 'cardio_bike', label: 'Xe Đạp', icon: '🚴' },
+                  { id: 'cardio_stairmaster', label: 'Leo Thang', icon: '🪜' },
+                  { id: 'cardio_rowing', label: 'Chèo Thuyền', icon: '🚣' },
+                  { id: 'cardio_elliptical', label: 'Đạp Elip', icon: '⚡' },
+                  { id: 'cardio_jump_rope', label: 'Nhảy Dây', icon: '🪢' },
+                ].map(item => {
+                  const isCurrent = currentExercise.exerciseId === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => handleSwitchCardio(item.id, currentExercise.cardioMinutes || 15)}
+                      className={`p-2 rounded-xl text-center border transition active:scale-95 ${
+                        isCurrent
+                          ? 'bg-orange-500 border-orange-500 text-white font-black shadow-xs'
+                          : 'bg-white border-slate-200 text-slate-700 hover:bg-orange-50/50 hover:border-orange-200'
+                      }`}
+                    >
+                      <span className="block text-sm mb-0.5">{item.icon}</span>
+                      <span className="text-[11px] block truncate font-bold">{item.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Duration Selector */}
+            <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200/80 flex items-center justify-between">
+              <span className="text-xs font-black text-slate-700">Thời lượng:</span>
+              <div className="flex gap-1">
+                {[10, 15, 20, 30, 45].map(mins => {
+                  const isSelected = (currentExercise.cardioMinutes || 15) === mins;
+                  return (
+                    <button
+                      key={mins}
+                      onClick={() => {
+                        handleSwitchCardio(currentExercise.exerciseId, mins);
+                      }}
+                      className={`px-2.5 py-1 rounded-xl text-xs font-black transition active:scale-95 ${
+                        isSelected
+                          ? 'bg-orange-600 text-white shadow-xs'
+                          : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+                      }`}
+                    >
+                      {mins}p
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Complete Cardio Button */}
             <button
               onClick={() => toggleSetComplete(0)}
-              className={`w-full py-4 rounded-2xl font-black text-sm shadow-md active:scale-95 transition flex items-center justify-center gap-2 ${
+              className={`w-full py-3.5 rounded-2xl font-black text-sm shadow-md active:scale-95 transition flex items-center justify-center gap-2 ${
                 currentExercise.sets[0]?.isCompleted
-                  ? 'bg-emerald-600 text-white'
-                  : 'bg-orange-600 text-white hover:bg-orange-500'
+                  ? 'bg-emerald-600 text-white shadow-emerald-500/30'
+                  : 'bg-orange-600 text-white hover:bg-orange-500 shadow-orange-500/30'
               }`}
             >
               {currentExercise.sets[0]?.isCompleted ? (
                 <>
                   <Check className="w-5 h-5 stroke-[3]" />
-                  ĐÃ HOÀN THÀNH CARDIO
+                  ĐÃ HOÀN THÀNH CARDIO ({currentExercise.cardioMinutes || 15} PHÚT)
                 </>
               ) : (
                 'BẤM HOÀN THÀNH CARDIO'
@@ -1011,123 +1227,188 @@ export const ActiveWorkoutModal: React.FC<ActiveWorkoutModalProps> = ({
           </div>
         ) : (
           <div className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-xs">
-            
-            {/* Table Column Headers */}
-            <div className="grid grid-cols-12 text-[11px] font-extrabold text-slate-400 uppercase tracking-wider pb-2 border-b border-slate-100 px-1">
-              <span className="col-span-2">Hiệp</span>
-              <span className="col-span-5 text-center">Mức tạ (kg)</span>
-              <span className="col-span-3 text-center">Reps</span>
-              <span className="col-span-2 text-right">Xong</span>
-            </div>
-
-            {/* Set Rows */}
-            <div className="divide-y divide-slate-100">
-              {currentExercise.sets.map((s, idx) => {
-                const isDone = s.isCompleted;
-                const currentWeight = s.loggedWeight ?? s.targetWeight;
-                const currentReps = s.loggedReps ?? s.targetReps;
-                const isWarmup = s.type === 'warmup';
-                const isAmrap = s.type === 'amrap';
-
-                return (
-                  <div
-                    key={idx}
-                    className={`grid grid-cols-12 items-center py-3 px-1 transition-colors ${
-                      isDone ? 'bg-emerald-50/40 rounded-2xl' : ''
-                    }`}
-                  >
-                    {/* Column 1: Set Badge (Tap to toggle Warmup W <-> Working 1,2,3) */}
-                    <div className="col-span-2 flex items-center">
-                      <button
-                        onClick={() => toggleSetType(idx)}
-                        className={`w-7 h-7 rounded-xl font-black text-xs flex items-center justify-center transition active:scale-90 ${
-                          isWarmup 
-                            ? 'bg-amber-100 text-amber-800 border border-amber-300 ring-2 ring-amber-200/60' 
-                            : (isAmrap 
-                                ? 'bg-gradient-to-r from-amber-500 to-rose-600 text-white shadow-xs' 
-                                : 'bg-slate-100 text-slate-700 border border-slate-200')
-                        }`}
-                        title="Chạm để chuyển giữa Hiệp Khởi Động (W) và Hiệp Chính"
-                      >
-                        {isWarmup ? 'W' : (isAmrap ? 'MAX' : idx + 1)}
-                      </button>
+            {(() => {
+              const isAssisted = currentExercise.exerciseName.toLowerCase().includes('assisted') || currentExercise.exerciseId.toLowerCase().includes('assisted');
+              return (
+                <>
+                  {isAssisted && (
+                    <div className="mb-2.5 p-2 bg-indigo-50 border border-indigo-100 rounded-xl text-[11px] text-indigo-900 font-medium flex items-center gap-1.5">
+                      <span>💡</span>
+                      <span>Máy trợ lực đối trọng: Mức tạ là phần máy đỡ bớt cho cơ thể (<strong>-kg</strong>). Càng giảm trợ lực thì càng nâng nặng!</span>
                     </div>
+                  )}
 
-                    {/* Column 2: Weight Stepper (Compact & Clean) */}
-                    <div className="col-span-5 flex items-center justify-center gap-1">
-                      <button
-                        disabled={isDone}
-                        onClick={() => updateSetField(idx, 'loggedWeight', -weightStep)}
-                        className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 font-black text-sm flex items-center justify-center disabled:opacity-30 active:scale-95"
-                      >
-                        -
-                      </button>
-                      <input
-                        type="number"
-                        step={0.5}
-                        disabled={isDone}
-                        value={currentWeight}
-                        onChange={(e) => setSetFieldDirect(idx, 'loggedWeight', parseFloat(e.target.value) || 0)}
-                        className={`w-14 py-1 text-center font-extrabold text-sm rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none ${
-                          isDone 
-                            ? 'bg-slate-50 border-transparent text-slate-500' 
-                            : (isWarmup ? 'bg-amber-50 border-amber-200 text-amber-900' : 'bg-white border-slate-200 text-slate-900')
-                        }`}
-                      />
-                      <button
-                        disabled={isDone}
-                        onClick={() => updateSetField(idx, 'loggedWeight', weightStep)}
-                        className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 font-black text-sm flex items-center justify-center disabled:opacity-30 active:scale-95"
-                      >
-                        +
-                      </button>
-                    </div>
-
-                    {/* Column 3: Reps Stepper */}
-                    <div className="col-span-3 flex items-center justify-center gap-1">
-                      <button
-                        disabled={isDone}
-                        onClick={() => updateSetField(idx, 'loggedReps', -1)}
-                        className="w-6 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 font-black text-xs flex items-center justify-center disabled:opacity-30 active:scale-95"
-                      >
-                        -
-                      </button>
-                      <input
-                        type="number"
-                        disabled={isDone}
-                        value={currentReps}
-                        onChange={(e) => setSetFieldDirect(idx, 'loggedReps', parseInt(e.target.value, 10) || 1)}
-                        className={`w-9 py-1 text-center font-extrabold text-sm rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none ${
-                          isDone ? 'bg-slate-50 border-transparent text-slate-500' : 'bg-white border-slate-200 text-slate-900'
-                        }`}
-                      />
-                      <button
-                        disabled={isDone}
-                        onClick={() => updateSetField(idx, 'loggedReps', 1)}
-                        className="w-6 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 font-black text-xs flex items-center justify-center disabled:opacity-30 active:scale-95"
-                      >
-                        +
-                      </button>
-                    </div>
-
-                    {/* Column 4: Checkmark (Big Satisfying Circle) */}
-                    <div className="col-span-2 flex items-center justify-end">
-                      <button
-                        onClick={() => toggleSetComplete(idx)}
-                        className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-150 active:scale-90 ${
-                          isDone 
-                            ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/30' 
-                            : 'bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-400'
-                        }`}
-                        title={isDone ? 'Bấm để hủy hoàn thành' : 'Bấm hoàn thành hiệp'}
-                      >
-                        <Check className={`w-4 h-4 stroke-[3] ${isDone ? 'text-white' : 'text-slate-400'}`} />
-                      </button>
-                    </div>
+                  {/* Table Column Headers */}
+                  <div className="grid grid-cols-12 text-[11px] font-extrabold text-slate-400 uppercase tracking-wider pb-2 border-b border-slate-100 px-1">
+                    <span className="col-span-2">Hiệp</span>
+                    <span className="col-span-5 text-center">
+                      {isAssisted ? 'Trợ lực (-kg)' : (isCableOrPinStackExercise(currentExercise) ? 'Mức tạ (kg/lbs)' : 'Mức tạ (kg)')}
+                    </span>
+                    <span className="col-span-3 text-center">Reps</span>
+                    <span className="col-span-2 text-right">Xong</span>
                   </div>
-                );
-              })}
-            </div>
+
+                  {/* Set Rows */}
+                  <div className="divide-y divide-slate-100">
+                    {currentExercise.sets.map((s, idx) => {
+                      const isDone = s.isCompleted;
+                      const currentWeight = s.loggedWeight ?? s.targetWeight;
+                      const currentReps = s.loggedReps ?? s.targetReps;
+                      const isWarmup = s.type === 'warmup';
+                      const isAmrap = s.type === 'amrap';
+                      const isCableOrPulley = isCableOrPinStackExercise(currentExercise);
+                      const lbsValue = isCableOrPulley && currentWeight > 0 ? getLbsFromKg(currentWeight) : null;
+
+                      return (
+                        <div
+                          key={idx}
+                          className={`grid grid-cols-12 items-center py-3 px-1 transition-colors ${
+                            isDone ? 'bg-emerald-50/40 rounded-2xl' : ''
+                          }`}
+                        >
+                          {/* Column 1: Set Badge (Tap to toggle Warmup W <-> Working 1,2,3) */}
+                          <div className="col-span-2 flex items-center">
+                            <button
+                              onClick={() => toggleSetType(idx)}
+                              className={`w-7 h-7 rounded-xl font-black text-xs flex items-center justify-center transition active:scale-90 ${
+                                isWarmup 
+                                  ? 'bg-amber-100 text-amber-800 border border-amber-300 ring-2 ring-amber-200/60' 
+                                  : (isAmrap 
+                                      ? 'bg-gradient-to-r from-amber-500 to-rose-600 text-white shadow-xs' 
+                                      : 'bg-slate-100 text-slate-700 border border-slate-200')
+                              }`}
+                              title="Chạm để chuyển giữa Hiệp Khởi Động (W) và Hiệp Chính"
+                            >
+                              {isWarmup ? 'W' : (isAmrap ? 'MAX' : idx + 1)}
+                            </button>
+                          </div>
+
+                          {/* Column 2: Weight Stepper (Compact & Clean) */}
+                          <div className="col-span-5 flex flex-col items-center justify-center">
+                            <div className="flex items-center justify-center gap-1">
+                              <button
+                                onClick={() => updateSetField(idx, 'loggedWeight', -weightStep)}
+                                className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 font-black text-sm flex items-center justify-center active:scale-95"
+                                title={isAssisted ? "Giảm trợ lực (nặng hơn)" : (isCableOrPulley ? "Giảm 1 nấc lá tạ (lbs)" : "Giảm tạ")}
+                              >
+                                -
+                              </button>
+                              <div className="flex items-center">
+                                {isAssisted && (
+                                  <span className="text-slate-500 font-extrabold text-sm mr-0.5 select-none">-</span>
+                                )}
+                                <input
+                                  type="number"
+                                  inputMode="decimal"
+                                  step="any"
+                                  value={currentWeight === 0 ? '' : (isAssisted ? Math.abs(currentWeight) : currentWeight)}
+                                  placeholder="0"
+                                  onChange={(e) => {
+                                    const valStr = e.target.value.trim();
+                                    if (valStr === '') {
+                                      setSetFieldDirect(idx, 'loggedWeight', 0);
+                                    } else {
+                                      const val = parseFloat(valStr);
+                                      if (!isNaN(val)) {
+                                        setSetFieldDirect(idx, 'loggedWeight', isAssisted ? -Math.abs(val) : val);
+                                      }
+                                    }
+                                  }}
+                                  onFocus={(e) => e.target.select()}
+                                  className={`w-14 py-1 text-center font-extrabold text-sm rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none ${
+                                    isDone 
+                                      ? 'bg-emerald-50/60 border-emerald-200 text-emerald-900' 
+                                      : (isWarmup ? 'bg-amber-50 border-amber-200 text-amber-900' : 'bg-white border-slate-200 text-slate-900')
+                                  }`}
+                                />
+                              </div>
+                              <button
+                                onClick={() => updateSetField(idx, 'loggedWeight', weightStep)}
+                                className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 font-black text-sm flex items-center justify-center active:scale-95"
+                                title={isAssisted ? "Tăng trợ lực (nhẹ hơn)" : (isCableOrPulley ? "Tăng 1 nấc lá tạ (lbs)" : "Tăng tạ")}
+                              >
+                                +
+                              </button>
+                            </div>
+
+                            {/* Lbs indicator for cable & machine pin-stack */}
+                            {lbsValue !== null && (
+                              <span className="text-[10px] font-bold text-purple-700 bg-purple-50 px-1 rounded border border-purple-200 mt-0.5 leading-tight">
+                                {lbsValue} lbs
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Column 3: Reps Stepper */}
+                          <div className="col-span-3 flex items-center justify-center gap-1">
+                            <button
+                              onClick={() => updateSetField(idx, 'loggedReps', -1)}
+                              className="w-6 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 font-black text-xs flex items-center justify-center active:scale-95"
+                            >
+                              -
+                            </button>
+                            <input
+                              type="number"
+                              inputMode="numeric"
+                              step="1"
+                              value={currentReps === 0 ? '' : currentReps}
+                              placeholder="0"
+                              onChange={(e) => {
+                                const valStr = e.target.value.trim();
+                                if (valStr === '') {
+                                  setSetFieldDirect(idx, 'loggedReps', 0);
+                                } else {
+                                  const val = parseInt(valStr, 10);
+                                  if (!isNaN(val)) {
+                                    setSetFieldDirect(idx, 'loggedReps', val);
+                                  }
+                                }
+                              }}
+                              onBlur={() => {
+                                if (!currentReps || currentReps <= 0) {
+                                  setSetFieldDirect(idx, 'loggedReps', s.targetReps || 10);
+                                }
+                              }}
+                              onFocus={(e) => e.target.select()}
+                              className={`w-9 py-1 text-center font-extrabold text-sm rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none ${
+                                isDone ? 'bg-emerald-50/60 border-emerald-200 text-emerald-900' : 'bg-white border-slate-200 text-slate-900'
+                              }`}
+                            />
+                            <button
+                              onClick={() => updateSetField(idx, 'loggedReps', 1)}
+                              className="w-6 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 font-black text-xs flex items-center justify-center active:scale-95"
+                            >
+                              +
+                            </button>
+                          </div>
+
+                          {/* Column 4: Checkmark & Delete Set Button */}
+                          <div className="col-span-2 flex items-center justify-end gap-1">
+                            {currentExercise.sets.length > 1 && (
+                              <button
+                                onClick={() => handleDeleteSet(idx)}
+                                className="w-6 h-6 rounded-md text-slate-300 hover:text-rose-600 hover:bg-rose-50 flex items-center justify-center transition active:scale-90"
+                                title="Xóa hiệp này"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                            <button
+                              onClick={() => toggleSetComplete(idx)}
+                              className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-150 active:scale-90 shrink-0 ${
+                                isDone 
+                                  ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/30' 
+                                  : 'bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-400'
+                              }`}
+                              title={isDone ? 'Bấm để hủy hoàn thành' : 'Bấm hoàn thành hiệp'}
+                            >
+                              <Check className={`w-4 h-4 stroke-[3] ${isDone ? 'text-white' : 'text-slate-400'}`} />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
 
             {/* Table Footer: Add Working Set / Add Warmup Set Buttons */}
             <div className="flex items-center gap-2 pt-3 border-t border-slate-100 mt-1">
@@ -1147,9 +1428,12 @@ export const ActiveWorkoutModal: React.FC<ActiveWorkoutModalProps> = ({
                 <span>Thêm hiệp khởi động</span>
               </button>
             </div>
-          </div>
-        )}
-      </div>
+          </>
+        );
+      })()}
+    </div>
+  )}
+</div>
 
       {/* ===================================================================== */}
       {/* BOTTOM BAR: Sleek Exercise Switcher (Previous / Next) */}
@@ -1203,10 +1487,10 @@ export const ActiveWorkoutModal: React.FC<ActiveWorkoutModalProps> = ({
       )}
 
       {/* Cable Stack Modal */}
-      {showCableModal && currentExercise.cableConfig && (
+      {showCableModal && (isCableOrPinStackExercise(currentExercise) || currentExercise.cableConfig) && (
         <CableStackModal
           initialWeight={currentExercise.sets[0]?.targetWeight || 15}
-          initialRatio={currentExercise.cableConfig.pulleyRatio}
+          initialRatio={currentExercise.cableConfig?.pulleyRatio || '1:1'}
           exerciseName={currentExercise.exerciseName}
           onApply={(newWeight, ratio) => {
             setExercises(prev => {

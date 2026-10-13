@@ -16,6 +16,7 @@ import {
   Sliders
 } from 'lucide-react';
 import { PlannedExercise, WorkoutSet } from '../types';
+import { getLbsFromKg, stepGymStackWeight, isSmithMachineExercise, isPlateLoadedExercise, isCableOrPinStackExercise } from '../engine/fitbodEngine';
 
 interface EditExerciseModalProps {
   exercise: PlannedExercise;
@@ -41,7 +42,7 @@ export const EditExerciseModal: React.FC<EditExerciseModalProps> = ({
   const [globalWeight, setGlobalWeight] = useState<number>(initialWeight);
   const [globalReps, setGlobalReps] = useState<number>(initialReps);
 
-  const weightStep = exercise.equipment === 'cable' 
+  const weightStep = isCableOrPinStackExercise(exercise)
     ? 1.25 
     : (exercise.equipment === 'dumbbell' ? 2 : 2.5);
 
@@ -52,7 +53,7 @@ export const EditExerciseModal: React.FC<EditExerciseModalProps> = ({
       if (updated[index]) {
         updated[index] = {
           ...updated[index],
-          [field]: Math.max(field === 'targetReps' ? 1 : 0, Math.round(value * 100) / 100)
+          [field]: Math.max(0, Math.round(value * 100) / 100)
         };
       }
       return updated;
@@ -65,7 +66,22 @@ export const EditExerciseModal: React.FC<EditExerciseModalProps> = ({
       const updated = [...prev];
       if (updated[index]) {
         const currentVal = updated[index][field];
-        const nextVal = Math.max(field === 'targetReps' ? 1 : 0, Math.round((currentVal + delta) * 100) / 100);
+        let nextVal: number;
+        if (field === 'targetWeight') {
+          if (isCableOrPinStackExercise(exercise)) {
+            nextVal = stepGymStackWeight(currentVal, delta > 0 ? 1 : -1);
+          } else if (isSmithMachineExercise(exercise)) {
+            const val = currentVal + (delta > 0 ? 2.5 : -2.5);
+            nextVal = Math.max(15, Math.round(val * 10) / 10);
+          } else if (isPlateLoadedExercise(exercise)) {
+            const val = currentVal + (delta > 0 ? 2.5 : -2.5);
+            nextVal = Math.max(0, Math.round(val * 10) / 10);
+          } else {
+            nextVal = Math.max(0, Math.round((currentVal + delta) * 10) / 10);
+          }
+        } else {
+          nextVal = Math.max(1, Math.round(currentVal + delta));
+        }
         updated[index] = {
           ...updated[index],
           [field]: nextVal
@@ -355,9 +371,16 @@ export const EditExerciseModal: React.FC<EditExerciseModalProps> = ({
                           
                           {/* Weight Stepper */}
                           <div className="bg-white p-2 rounded-xl border border-slate-200 shadow-2xs">
-                            <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block mb-1">
-                              Mức Tạ (kg)
-                            </span>
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">
+                                Mức Tạ (kg)
+                              </span>
+                              {isCableOrPinStackExercise(exercise) && s.targetWeight > 0 && (
+                                <span className="text-[10px] font-bold text-purple-700 bg-purple-50 px-1 rounded border border-purple-200">
+                                  {getLbsFromKg(s.targetWeight)} lbs
+                                </span>
+                              )}
+                            </div>
                             <div className="flex items-center justify-between gap-1">
                               <button
                                 onClick={() => handleStepSet(idx, 'targetWeight', -weightStep)}
@@ -411,10 +434,15 @@ export const EditExerciseModal: React.FC<EditExerciseModalProps> = ({
                                   inputMode="numeric"
                                   step="1"
                                   value={s.targetReps === 0 ? '' : s.targetReps}
-                                  placeholder="1"
+                                  placeholder="0"
                                   onChange={(e) => {
                                     const v = parseInt(e.target.value, 10);
-                                    handleUpdateSet(idx, 'targetReps', isNaN(v) ? 1 : v);
+                                    handleUpdateSet(idx, 'targetReps', isNaN(v) ? 0 : v);
+                                  }}
+                                  onBlur={() => {
+                                    if (!s.targetReps || s.targetReps <= 0) {
+                                      handleUpdateSet(idx, 'targetReps', 10);
+                                    }
                                   }}
                                   onFocus={(e) => (e.target as HTMLInputElement).select()}
                                   className="w-12 text-center font-black text-base text-slate-900 bg-slate-50 border border-slate-200 focus:border-blue-500 focus:bg-white rounded-lg py-1 px-0.5 outline-none"

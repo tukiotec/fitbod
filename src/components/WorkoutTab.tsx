@@ -2,6 +2,7 @@ import { isExerciseSpineSafe, HERNIATED_DISC_EXCLUDED_IDS, SPINE_SAFETY_REASONS,
 import React, { useState, useRef } from 'react';
 import { Play, Dumbbell, Clock, Layers, Sparkles, RefreshCw, ChevronRight, Info, Video, Eye, Flame, Target, Plus, Minus, Edit3 , Shield, ShieldAlert, AlertTriangle, Star, Ban, GripVertical } from 'lucide-react';
 import { WorkoutPlan, PlannedExercise, CardioType, ExerciseItem, MuscleGroup, EquipmentPreference, UserBodyProfile } from '../types';
+import { ExercisePreferenceStatus } from '../utils/exercisePreferences';
 import { MUSCLES_INFO, EXERCISE_CATALOG } from '../data/exerciseCatalog';
 import { PlateCalculatorModal } from './PlateCalculatorModal';
 import { CableStackModal } from './CableStackModal';
@@ -9,7 +10,7 @@ import { ExerciseDetailModal } from './ExerciseDetailModal';
 import { SwapExerciseModal } from './SwapExerciseModal';
 import { TargetMusclesModal } from './TargetMusclesModal';
 import { EditExerciseModal } from './EditExerciseModal';
-import { ExercisePreferenceStatus } from '../utils/exercisePreferences';
+import { getLbsFromKg, isSmithMachineExercise, isPlateLoadedExercise, isCableOrPinStackExercise, isAssistedExercise } from '../engine/fitbodEngine';
 
 interface WorkoutTabProps {
   workout: WorkoutPlan;
@@ -200,18 +201,26 @@ export const WorkoutTab: React.FC<WorkoutTabProps> = ({
         </div>
 
         {/* Mini stats row */}
-        <div className="grid grid-cols-3 gap-2 py-3 px-3 bg-white/10 backdrop-blur-md rounded-2xl border border-white/10 mb-4 text-center">
+        <div className="grid grid-cols-4 gap-1.5 py-3 px-2 bg-white/10 backdrop-blur-md rounded-2xl border border-white/10 mb-4 text-center">
           <div>
             <span className="text-[10px] text-slate-400 uppercase font-semibold block">Thời lượng</span>
-            <span className="text-sm font-extrabold text-white">{workout.durationMinutes} phút</span>
+            <span className="text-sm font-extrabold text-white">{workout.durationMinutes}m</span>
           </div>
           <div>
             <span className="text-[10px] text-slate-400 uppercase font-semibold block">Bài tập</span>
-            <span className="text-sm font-extrabold text-white">{workout.exercises.length} bài</span>
+            <span className="text-sm font-extrabold text-white">{workout.exercises.length}</span>
           </div>
           <div>
-            <span className="text-[10px] text-slate-400 uppercase font-semibold block">Tổng số Sets</span>
-            <span className="text-sm font-extrabold text-blue-400">{totalSets} sets</span>
+            <span className="text-[10px] text-slate-400 uppercase font-semibold block">Tổng Sets</span>
+            <span className="text-sm font-extrabold text-blue-400">{totalSets}</span>
+          </div>
+          <div>
+            <span className="text-[10px] text-amber-300 uppercase font-bold block flex items-center justify-center gap-0.5">
+              <Flame className="w-2.5 h-2.5" /> Calo
+            </span>
+            <span className="text-sm font-extrabold text-amber-400">
+              ~{workout.estimatedCalories || Math.round(workout.durationMinutes * 8.5)}
+            </span>
           </div>
         </div>
 
@@ -370,10 +379,13 @@ export const WorkoutTab: React.FC<WorkoutTabProps> = ({
 
           <div className="grid grid-cols-4 gap-1.5 mb-2">
             {[
-              { id: 'none', label: 'Không', icon: null },
+              { id: 'none', label: 'Không', icon: '❌' },
+              { id: 'treadmill', label: 'Chạy bộ', icon: '🏃‍♂️' },
               { id: 'bike', label: 'Đạp xe', icon: '🚴' },
-              { id: 'treadmill', label: 'Đi bộ/Chạy', icon: '🏃' },
-              { id: 'elliptical', label: 'Elliptical', icon: '🎿' },
+              { id: 'stairmaster', label: 'Leo thang', icon: '🪜' },
+              { id: 'rowing', label: 'Chèo thuyền', icon: '🚣' },
+              { id: 'elliptical', label: 'Đạp Elip', icon: '⚡' },
+              { id: 'jump_rope', label: 'Nhảy dây', icon: '🪢' },
             ].map(item => (
               <button
                 key={item.id}
@@ -385,7 +397,7 @@ export const WorkoutTab: React.FC<WorkoutTabProps> = ({
                 }`}
               >
                 {item.icon && <span className="block text-xs mb-0.5">{item.icon}</span>}
-                <span className="truncate block">{item.label}</span>
+                <span className="truncate block text-[10px]">{item.label}</span>
               </button>
             ))}
           </div>
@@ -598,26 +610,26 @@ export const WorkoutTab: React.FC<WorkoutTabProps> = ({
 
                   {/* Right: Equipment calc & Actions */}
                   <div className="flex items-center gap-1 shrink-0">
-                    {ex.equipment === 'barbell' && (
+                    {isPlateLoadedExercise(ex) && (
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          setActiveCalcWeight(firstSet?.targetWeight || 60);
+                          setActiveCalcWeight(firstSet?.targetWeight || (isSmithMachineExercise(ex) ? 40 : 60));
                         }}
-                        className="p-1.5 bg-slate-50 text-slate-600 hover:text-blue-600 rounded-lg text-xs active:scale-95 transition"
-                        title="Mở Plate Calculator"
+                        className="p-1.5 bg-blue-50 text-blue-700 hover:text-blue-900 border border-blue-200 rounded-lg text-xs active:scale-95 transition"
+                        title={isSmithMachineExercise(ex) ? "Máy Smith: Mở máy tính xếp đĩa tạ kg mỗi bên" : "Mở Plate Calculator (bánh đĩa kg)"}
                       >
                         <Dumbbell className="w-3.5 h-3.5" />
                       </button>
                     )}
-                    {ex.equipment === 'cable' && (
+                    {isCableOrPinStackExercise(ex) && (
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           setActiveCableExercise(ex);
                         }}
                         className="p-1.5 bg-purple-50 text-purple-600 hover:text-purple-800 rounded-lg text-xs border border-purple-200 active:scale-95 transition"
-                        title="Xem nấc cọc tạ cáp & tỷ lệ ròng rọc"
+                        title="Xem nấc cọc tạ cáp/máy (lbs) & tỷ lệ ròng rọc"
                       >
                         <Layers className="w-3.5 h-3.5" />
                       </button>
@@ -764,7 +776,7 @@ export const WorkoutTab: React.FC<WorkoutTabProps> = ({
                       )}
 
                       <span className="text-slate-300">•</span>
-                      {ex.equipment === 'cable' ? (
+                      {isCableOrPinStackExercise(ex) ? (
                         <span 
                           onClick={(e) => {
                             e.stopPropagation();
@@ -774,6 +786,18 @@ export const WorkoutTab: React.FC<WorkoutTabProps> = ({
                           title="Bấm để chỉnh nấc cọc tạ cáp & tỷ lệ ròng rọc"
                         >
                           Cáp {ex.cableConfig?.pulleyRatio || '2:1'}
+                        </span>
+                      ) : isSmithMachineExercise(ex) ? (
+                        <span 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveCalcWeight(firstSet?.targetWeight || 40);
+                          }}
+                          className="text-[10px] font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200 cursor-pointer hover:bg-blue-100 whitespace-nowrap flex items-center gap-1"
+                          title="Máy Smith lắp bánh tạ đĩa kg - Chạm để xem số đĩa tạ"
+                        >
+                          <Dumbbell className="w-2.5 h-2.5" />
+                          Smith (Đĩa kg)
                         </span>
                       ) : (
                         <span className="text-[11px] text-slate-400 font-medium capitalize whitespace-nowrap">
@@ -787,11 +811,22 @@ export const WorkoutTab: React.FC<WorkoutTabProps> = ({
                 {/* Sets & Video Button Row */}
                 <div className="flex items-center justify-between pt-2.5 mt-2 border-t border-slate-100 text-xs">
                   {ex.isCardio ? (
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1.5 flex-wrap">
                       <span className="px-2.5 py-0.5 bg-orange-100 text-orange-800 font-black rounded-lg text-[11px] flex items-center gap-1">
                         <Flame className="w-3.5 h-3.5 fill-orange-500 text-orange-500" />
                         Cardio: {ex.cardioMinutes || 15} phút
                       </span>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSwapTargetIndex(idx);
+                        }}
+                        className="px-2 py-0.5 bg-orange-50 hover:bg-orange-100 text-orange-750 font-bold border border-orange-200 rounded-lg text-[10px] flex items-center gap-1 active:scale-95 transition"
+                        title="Đổi sang môn cardio khác"
+                      >
+                        <RefreshCw className="w-2.5 h-2.5 text-orange-600" />
+                        <span>Đổi môn khác</span>
+                      </button>
                       <span className="text-[11px] text-slate-400">Đốt calo cuối buổi</span>
                     </div>
                   ) : (
@@ -834,7 +869,7 @@ export const WorkoutTab: React.FC<WorkoutTabProps> = ({
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              const step = ex.equipment === 'cable' ? 1.25 : (ex.equipment === 'dumbbell' ? 2 : 2.5);
+                              const step = isCableOrPinStackExercise(ex) ? 1.25 : (ex.equipment === 'dumbbell' ? 2 : 2.5);
                               handleQuickAdjustWeight(idx, -step);
                             }}
                             className="w-6 h-6 rounded-lg bg-white hover:bg-blue-100 text-blue-700 font-black text-xs flex items-center justify-center border border-blue-200/60 shadow-2xs active:scale-90 transition"
@@ -853,9 +888,15 @@ export const WorkoutTab: React.FC<WorkoutTabProps> = ({
                           >
                             <span>
                               {(() => {
+                                const isAssisted = ex.exerciseName.toLowerCase().includes('assisted') || ex.exerciseId.toLowerCase().includes('assisted');
                                 const weights = ex.sets.map(s => s.targetWeight);
                                 const minW = Math.min(...weights);
                                 const maxW = Math.max(...weights);
+                                if (isAssisted) {
+                                  const absMin = Math.abs(minW);
+                                  const absMax = Math.abs(maxW);
+                                  return absMin === absMax ? `@-${absMin} kg` : `@-${Math.max(absMin, absMax)} đến -${Math.min(absMin, absMax)} kg`;
+                                }
                                 return minW === maxW ? `@${minW} kg` : `@${minW}–${maxW} kg`;
                               })()}
                             </span>
@@ -865,7 +906,7 @@ export const WorkoutTab: React.FC<WorkoutTabProps> = ({
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              const step = ex.equipment === 'cable' ? 1.25 : (ex.equipment === 'dumbbell' ? 2 : 2.5);
+                              const step = isCableOrPinStackExercise(ex) ? 1.25 : (ex.equipment === 'dumbbell' ? 2 : 2.5);
                               handleQuickAdjustWeight(idx, step);
                             }}
                             className="w-6 h-6 rounded-lg bg-white hover:bg-blue-100 text-blue-700 font-black text-xs flex items-center justify-center border border-blue-200/60 shadow-2xs active:scale-90 transition"
@@ -878,29 +919,41 @@ export const WorkoutTab: React.FC<WorkoutTabProps> = ({
 
                       {/* Individual Sets Pills */}
                       <div className="flex items-center gap-1.5 flex-wrap pt-1 border-t border-slate-100/80">
-                        {ex.sets.map((s, sIdx) => (
-                          <button
-                            key={sIdx}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setEditingExerciseIndex(idx);
-                            }}
-                            className={`px-2 py-0.5 rounded-lg text-[10px] font-bold cursor-pointer hover:scale-105 active:scale-95 transition border flex items-center gap-1 shadow-2xs ${
-                              s.type === 'warmup'
-                                ? 'bg-amber-50 text-amber-900 border-amber-200'
-                                : (s.type === 'amrap'
-                                    ? 'bg-purple-50 text-purple-900 border-purple-300'
-                                    : 'bg-white text-slate-700 border-slate-200 hover:border-blue-400')
-                            }`}
-                            title="Chạm để sửa hiệp này"
-                          >
-                            <span className="opacity-50 font-black">
-                              {s.type === 'warmup' ? 'W' : (s.type === 'amrap' ? 'MAX' : `H${sIdx + 1}`)}:
-                            </span>
-                            <span className="font-black text-slate-900">{s.targetWeight}kg</span>
-                            <span className="opacity-75">× {s.targetReps}{s.type === 'amrap' ? '+' : ''}</span>
-                          </button>
-                        ))}
+                        {(() => {
+                          const isAssisted = isAssistedExercise(ex);
+                          const isCableOrPulley = isCableOrPinStackExercise(ex);
+                          return ex.sets.map((s, sIdx) => {
+                            const lbsVal = isCableOrPulley && s.targetWeight > 0 ? getLbsFromKg(s.targetWeight) : null;
+                            return (
+                              <button
+                                key={sIdx}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEditingExerciseIndex(idx);
+                                }}
+                                className={`px-2 py-0.5 rounded-lg text-[10px] font-bold cursor-pointer hover:scale-105 active:scale-95 transition border flex items-center gap-1 shadow-2xs ${
+                                  s.type === 'warmup'
+                                    ? 'bg-amber-50 text-amber-900 border-amber-200'
+                                    : (s.type === 'amrap'
+                                        ? 'bg-purple-50 text-purple-900 border-purple-300'
+                                        : 'bg-white text-slate-700 border-slate-200 hover:border-blue-400')
+                                }`}
+                                title="Chạm để sửa hiệp này"
+                              >
+                                <span className="opacity-50 font-black">
+                                  {s.type === 'warmup' ? 'W' : (s.type === 'amrap' ? 'MAX' : `H${sIdx + 1}`)}:
+                                </span>
+                                <span className="font-black text-slate-900">
+                                  {isAssisted ? `-${Math.abs(s.targetWeight)}kg` : `${s.targetWeight}kg`}
+                                  {lbsVal !== null && (
+                                    <span className="text-[9px] text-purple-600 font-bold ml-0.5">({lbsVal}lb)</span>
+                                  )}
+                                </span>
+                                <span className="opacity-75">× {s.targetReps}{s.type === 'amrap' ? '+' : ''}</span>
+                              </button>
+                            );
+                          });
+                        })()}
                       </div>
                     </div>
                   )}
