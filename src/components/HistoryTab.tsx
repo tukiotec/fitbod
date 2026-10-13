@@ -308,7 +308,7 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({ onImportSuccess }) => {
               <h2 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
                 <span>Bảo Vệ Bài Tập & Khôi Phục iOS</span>
                 <span className="px-2 py-0.5 text-[10px] font-black bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full">
-                  Documents & Preferences
+                  iOS Documents
                 </span>
               </h2>
               <p className="text-xs text-slate-500 font-medium">
@@ -325,7 +325,7 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({ onImportSuccess }) => {
             <span>Chế độ bảo vệ vĩnh viễn (iOS Documents) đang hoạt động</span>
           </div>
           <p className="text-[11px] text-emerald-700">
-            Dữ liệu bài tập được lưu song song vào thư mục <b>Tệp (Documents)</b> và <b>Preferences</b> trên iPhone. Apple cam kết thư mục này <b>KHÔNG BAO GIỜ</b> bị xóa khi Sideloadly cài đè file IPA mới.
+            Dữ liệu bài tập được lưu song song vào thư mục <b>Tệp (Documents)</b> trên iPhone. Apple cam kết thư mục này <b>KHÔNG BAO GIỜ</b> bị xóa khi Sideloadly cài đè file IPA mới. Sếp có thể xem trực tiếp trong app <b>Tệp</b>!
           </p>
         </div>
 
