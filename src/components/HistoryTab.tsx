@@ -23,6 +23,12 @@ import {
 import { parseFitbodCsvText, FitbodCsvParseResult, FitbodRawLogEntry } from '../engine/fitbodEngine';
 import { getActiveProfile, getProfileItem, setProfileItem, resetToDefaultFitbodHistory } from '../utils/profileStorage';
 import { DEFAULT_FITBOD_STATS } from '../data/defaultWorkoutHistory';
+import { 
+  scanAllStorageSources, 
+  restoreFromScannedItem, 
+  StorageScanItem, 
+  persistBackupToNative 
+} from '../utils/nativePersistence';
 
 interface HistoryTabProps {
   onImportSuccess: (data: any) => void;
@@ -34,6 +40,46 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({ onImportSuccess }) => {
   const [visibleCount, setVisibleCount] = useState<number>(10);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const activeProfile = getActiveProfile();
+  const [scanItems, setScanItems] = useState<StorageScanItem[] | null>(null);
+  const [isScanning, setIsScanning] = useState<boolean>(false);
+  const [manualSaveStatus, setManualSaveStatus] = useState<string | null>(null);
+
+  const handleScanStorage = async () => {
+    setIsScanning(true);
+    try {
+      const items = await scanAllStorageSources();
+      setScanItems(items);
+      if (items.length === 0) {
+        alert('Không tìm thấy bản lưu nào khác trong LocalStorage, Preferences hoặc Tệp iOS.');
+      }
+    } catch (e: any) {
+      alert('Lỗi quét bộ nhớ: ' + (e?.message || e));
+    } finally {
+      setIsScanning(false);
+    }
+  };
+
+  const handleRestoreScannedItem = (item: StorageScanItem) => {
+    if (confirm(`Sếp có muốn khôi phục dữ liệu từ nguồn [${item.source}] (${item.count} hiệp / buổi tập)?`)) {
+      try {
+        restoreFromScannedItem(item);
+        alert(`✅ Đã khôi phục thành công! Đang tải lại ứng dụng...`);
+        window.location.reload();
+      } catch (err: any) {
+        alert('❌ Lỗi khôi phục: ' + (err?.message || err));
+      }
+    }
+  };
+
+  const handleManualNativeBackup = async () => {
+    const res = await persistBackupToNative();
+    if (res.success) {
+      setManualSaveStatus('✅ Đã lưu an toàn toàn bộ bài tập & cài đặt vào thư mục Tệp iOS (Documents) và Preferences!');
+      setTimeout(() => setManualSaveStatus(null), 4000);
+    } else {
+      alert('Lỗi sao lưu: ' + res.error);
+    }
+  };
 
   const [stats, setStats] = useState<FitbodCsvParseResult | null>(() => {
     try {
@@ -163,6 +209,9 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({ onImportSuccess }) => {
     a.download = `FitbodPro_${cleanProfileName}_Backup_${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
+
+    // Đồng thời cập nhật ngay vào Native iOS Documents & Preferences
+    persistBackupToNative();
   };
 
   const exportFitbodCsv = () => {
@@ -248,6 +297,110 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({ onImportSuccess }) => {
   return (
     <div className="space-y-4 pb-20">
       
+      {/* 🛡️ Native iOS File Sharing & Auto Recovery Card */}
+      <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-sm relative overflow-hidden">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-3">
+            <div className="p-3 bg-emerald-50 text-emerald-600 rounded-2xl border border-emerald-100">
+              <ShieldCheck className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
+                <span>Bảo Vệ Bài Tập & Khôi Phục iOS</span>
+                <span className="px-2 py-0.5 text-[10px] font-black bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full">
+                  Documents & Preferences
+                </span>
+              </h2>
+              <p className="text-xs text-slate-500 font-medium">
+                Chống mất dữ liệu khi cập nhật/cài đè file IPA qua Sideloadly
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Trạng thái bảo vệ */}
+        <div className="bg-emerald-50/70 border border-emerald-100 rounded-2xl p-3 mb-3 text-xs text-emerald-900 leading-relaxed">
+          <div className="flex items-center gap-1.5 font-bold mb-1">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span>Chế độ bảo vệ vĩnh viễn (iOS Documents) đang hoạt động</span>
+          </div>
+          <p className="text-[11px] text-emerald-700">
+            Dữ liệu bài tập được lưu song song vào thư mục <b>Tệp (Documents)</b> và <b>Preferences</b> trên iPhone. Apple cam kết thư mục này <b>KHÔNG BAO GIỜ</b> bị xóa khi Sideloadly cài đè file IPA mới.
+          </p>
+        </div>
+
+        {/* Nút Quét và Sao lưu */}
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            onClick={handleScanStorage}
+            disabled={isScanning}
+            className="py-3 px-3 bg-slate-900 hover:bg-black text-white rounded-2xl font-bold text-xs flex items-center justify-center gap-2 active:scale-[0.98] transition shadow-sm disabled:opacity-50"
+          >
+            <Search className="w-4 h-4 text-amber-400" />
+            <span>{isScanning ? 'Đang Quét...' : 'Quét Bộ Nhớ Đã Lưu'}</span>
+          </button>
+
+          <button
+            onClick={handleManualNativeBackup}
+            className="py-3 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-bold text-xs flex items-center justify-center gap-1.5 active:scale-[0.98] transition shadow-sm"
+          >
+            <HardDrive className="w-4 h-4" />
+            <span>Sao Lưu Vào Tệp iOS</span>
+          </button>
+        </div>
+
+        {manualSaveStatus && (
+          <div className="mt-2.5 p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl text-xs font-semibold text-emerald-800 flex items-center gap-2 animate-in fade-in">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span>{manualSaveStatus}</span>
+          </div>
+        )}
+
+        {/* Danh sách kết quả quét (nếu có) */}
+        {scanItems && (
+          <div className="mt-3.5 border-t border-slate-100 pt-3">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-bold text-slate-700">Kết quả quét tìm dữ liệu ({scanItems.length}):</span>
+              <button
+                onClick={() => setScanItems(null)}
+                className="text-[11px] text-slate-400 hover:text-slate-600"
+              >
+                Đóng
+              </button>
+            </div>
+            {scanItems.length === 0 ? (
+              <p className="text-xs text-slate-500 italic p-2 bg-slate-50 rounded-xl">
+                Không tìm thấy dữ liệu bổ sung nào khác. Toàn bộ bài tập hiện tại đã đồng bộ.
+              </p>
+            ) : (
+              <div className="space-y-2 max-h-60 overflow-y-auto">
+                {scanItems.map((item, idx) => (
+                  <div key={idx} className="p-3 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="px-1.5 py-0.5 text-[9px] font-bold bg-blue-100 text-blue-800 rounded">
+                          {item.source}
+                        </span>
+                        <span className="text-xs font-bold text-slate-800 truncate">{item.key}</span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 mt-0.5">
+                        {item.count} hiệp / buổi • {item.dateSample}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => handleRestoreScannedItem(item)}
+                      className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold active:scale-95 transition shrink-0"
+                    >
+                      Khôi Phục
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* 1. Unified Data Hub Card: Nạp & Sao Lưu Thống Nhất */}
       <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-sm relative overflow-hidden">
         <div className="flex items-center gap-3 mb-3">

@@ -61,6 +61,10 @@ import {
   removeProfileItem 
 } from './utils/profileStorage';
 import { 
+  persistBackupToNative, 
+  autoHealFromNativePersistence 
+} from './utils/nativePersistence';
+import { 
   getExercisePreferences, 
   setExercisePreference,
   ExercisePreferenceStatus 
@@ -187,6 +191,30 @@ export const App: React.FC = () => {
       window.removeEventListener('focus', updateLiveRecovery);
     };
   }, [baseRecovery, lastTrainedTime]);
+
+  // 🛡️ TỰ ĐỘNG PHỤC HỒI TỪ NATIVE PERSISTENCE (IOS DOCUMENTS / PREFERENCES)
+  // Nếu WebKit LocalStorage bị xóa sau khi update Sideloadly, tự động khôi phục
+  useEffect(() => {
+    autoHealFromNativePersistence().then(res => {
+      if (res.healed) {
+        console.log('[App] Auto-healed from native persistence:', res.message);
+        try {
+          const freshHist = getProfileItem('fitbod_exercise_history');
+          if (freshHist) setExerciseHistory(JSON.parse(freshHist));
+        } catch (e) {}
+      }
+    });
+
+    const handleBackgroundSync = () => {
+      if (document.visibilityState === 'hidden') {
+        persistBackupToNative();
+      }
+    };
+    document.addEventListener('visibilitychange', handleBackgroundSync);
+    return () => {
+      document.removeEventListener('visibilitychange', handleBackgroundSync);
+    };
+  }, []);
 
   // Custom target muscles
   const [customTargetMuscles, setCustomTargetMuscles] = useState<MuscleGroup[] | null>(() => {
@@ -1041,6 +1069,9 @@ export const App: React.FC = () => {
           currentStats.totalPRs = currentStats.records.length;
           currentStats.records.sort((a, b) => b.maxE1RM - a.maxE1RM);
           setProfileItem('fitbod_stats_cache', JSON.stringify(currentStats));
+
+          // 🛡️ Tự động đồng bộ ngay vào iOS Documents & Preferences sau mỗi buổi tập
+          persistBackupToNative();
         }
       } catch (logErr) {
         console.error('Lỗi khi tích lũy fitbod_workout_log và stats:', logErr);

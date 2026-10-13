@@ -72,5 +72,9 @@
 	</array>
 	<key>NSUserNotificationsUsageDescription</key>
 	<string>Fitbod Pro thông báo khi hết thời gian nghỉ giữa các hiệp tập.</string>
+	<key>UIFileSharingEnabled</key>
+	<true/>
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<true/>
 </dict>
 </plist>
